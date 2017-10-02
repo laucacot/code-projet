@@ -49,16 +49,16 @@ const float C=1.35e21;
     //diametre (m)
 
 const value_type d_e=0.5*(142e-12+2*2.8179e-15);
-const value_type d_Arp=200e-12;
-const value_type d_Armet=200e-12;
-const value_type d_SiH3m=200e-12;
-const value_type d_SiH2m=200e-12;
-const value_type d_SiH3p=200e-12;
-const value_type d_H2p=200e-12;
-const value_type d_Si2H4m=200e-12;
-const value_type d_Si2H3m=200e-12;
-const value_type d_Si2H5m=200e-12;
-const value_type d_SiHm=200e-12;
+const value_type d_Arp=1.2e-10;
+const value_type d_Armet=1.2e-10;
+const value_type d_SiH3m=1.2e-10;
+const value_type d_SiH2m=1.2e-10;
+const value_type d_SiH3p=1.2e-10;
+const value_type d_H2p=1.2e-10;
+const value_type d_Si2H4m=1.2e-10;
+const value_type d_Si2H3m=1.2e-10;
+const value_type d_Si2H5m=1.2e-10;
+const value_type d_SiHm=1.2e-10;
 
 
     //masses (kg)
@@ -1344,7 +1344,7 @@ int main(int argc, char **argv)
   // Time variables
   value_type t = 0.0;
   value_type dt = 1.0e-8;
-  value_type Tmax = 1;
+  value_type Tmax = 20e-3;
   value_type NT = Tmax/dt;
 
   // Root finding variables
@@ -1448,7 +1448,7 @@ int main(int argc, char **argv)
 
   cerr<<"H="<<H<<endl;
 
-
+cerr<<Da_e<<endl;
   return 0;
 
 }
