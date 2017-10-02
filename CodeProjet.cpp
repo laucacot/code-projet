@@ -1,0 +1,1455 @@
+#include <iostream>
+#include <string>
+#include <cmath>
+//#include <boost/serialization/array_wrapper.hpp>
+
+#include <vector>
+// Optimization
+#define BOOST_UBLAS_NDEBUG
+#include <fstream>
+#include <exception>
+#include <string>
+#include <utility>
+#include <boost/array.hpp>
+#include <boost/numeric/odeint.hpp>
+#include <time.h>
+#include <stdlib.h>
+
+using namespace std;
+using namespace boost::numeric::odeint;
+using namespace boost::math::tools;
+
+// type definitions
+typedef double value_type;// or typedef float value_type;
+typedef boost::numeric::ublas::vector< value_type > state_type;
+typedef boost::numeric::ublas::matrix< value_type > matrix_type;
+typedef rosenbrock4< value_type > stepper_type;
+
+// constants
+const value_type pressure = 13.332237; //pascal soit 0.1 torr
+const value_type Tg =0.02758 ;
+const value_type L = 3e-2; //distance netre deux plaques en m
+const value_type k_b = 1.38064852e-23; // constante de boltzman en J/K
+const value_type K = 8.6173303e-5; //constqnte de boltzman en eV/k
+const value_type D_Amet=0.005; //diffusion des Ar* en m2/s
+const value_type pi = M_PI;
+const value_type diff = pow((pi/L), 2);
+const value_type n_Ar =  (0.1/760)*2.69e25;
+const value_type n_SiH4_ini = n_Ar/100.;
+const value_type n_Arp_ini = 1.e16;
+const value_type n_e_ini = 1.e14;
+const int Nbr_espece=22;
+const value_type DP = 1.58e23;//puissance totale du systeme
+
+const float C=1.35e21;
+
+//calcul des diffusions
+
+
+    //diametre (m)
+
+const value_type d_e=0.5*(142e-12+2*2.8179e-15);
+const value_type d_Arp=200e-12;
+const value_type d_Armet=200e-12;
+const value_type d_SiH3m=200e-12;
+const value_type d_SiH2m=200e-12;
+const value_type d_SiH3p=200e-12;
+const value_type d_H2p=200e-12;
+const value_type d_Si2H4m=200e-12;
+const value_type d_Si2H3m=200e-12;
+const value_type d_Si2H5m=200e-12;
+const value_type d_SiHm=200e-12;
+
+
+    //masses (kg)
+const value_type conv_masse=1.6726e-27;
+const value_type m_Ar=39.948*conv_masse;
+const value_type m_Arp=m_Ar;
+const value_type m_e=9.109e-31;
+const value_type m_Armet=m_Ar;
+const value_type m_SiH4=(28.1+4)*conv_masse;
+const value_type m_SiH3=(28.1+3)*conv_masse;
+const value_type m_H=1*conv_masse;
+const value_type m_SiH2=(28.1+2)*conv_masse;
+const value_type m_SiH3m=m_SiH3;
+const value_type m_SiH2m=m_SiH2;
+const value_type m_SiH3p=m_SiH3;
+const value_type m_H2=2*conv_masse;
+const value_type m_H2p=m_H2;
+const value_type m_SiH=(28.1+1)*conv_masse;
+const value_type m_Si2H5=(2*28.1+5)*conv_masse;
+const value_type m_Si=28.1*conv_masse;
+const value_type m_Si2H2=(2*28.1+2)*conv_masse;
+const value_type m_Si2H4m=(2*28.1+4)*conv_masse;
+const value_type m_Si2H6=(2*28.1+6)*conv_masse;
+const value_type m_Si2H3m=(2*28.1+3)*conv_masse;
+const value_type m_Si2H5m=(2*28.1+5)*conv_masse;
+const value_type m_SiHm=(28.1+1)*conv_masse;
+
+//diffusion libre
+
+
+value_type DL (value_type d, value_type m)
+{
+  value_type Diff_Libre;
+  Diff_Libre=2.175742492e-35 *((pow(Tg,(3/2)))/(pressure*pow(d,2)*pow(m,0.5)));
+
+  return Diff_Libre;
+}
+
+value_type mu (value_type dl)
+{
+value_type mobilite;
+mobilite=1.1604e4*dl/Tg;
+return mobilite;
+}
+
+
+//calcul des K dependant de Te
+
+value_type k1 (value_type Te) //K1 Ar + e -> Ar+ + 2e
+{
+  value_type K1;
+  K1=7.06E-17*pow((Te),0.6)*exp(-(16.14)/(Te));
+  return K1;
+}
+
+value_type k2 (value_type Te) //K2 Ar + e -> Ar* + e
+{
+  value_type K2;
+  K2=11.69E-15*exp(-(12.31)/(Te));
+  return K2;
+}
+
+value_type k3 (value_type Te) //K3 Ar* + e -> Ar+ + 2e
+{
+  value_type K3;
+  K3=124.92E-15*exp(-(5.39)/(Te));
+  return K3;
+}
+
+value_type k4 (value_type Te) //K4 Ar* + Ar* -> Ar + Ar+ + e
+{
+  value_type K4;
+  K4=6.144e-16;
+  return K4;
+}
+
+value_type k5 (value_type Te) //K5 Ar* + e -> Ar + e
+{
+  value_type K5;
+  K5=431.89E-18*pow((Te),0.74);
+  return K5;
+}
+
+value_type k6 (value_type Te) //K6 SiH4 + e -> SiH3 + H + e
+{
+    value_type K6;
+    K6=1.83E-9*pow((Te),-1)*exp(-(10.68)/(Te));
+    return K6;
+
+}
+
+value_type k7 (value_type Te) //K7 SiH4 + e -> SiH2 + 2H + e
+{
+    value_type K7;
+    K7=8.97E-9*pow((Te),-1)*exp(-(10.68)/(Te));
+    return K7;
+
+}
+
+value_type k8 (value_type Te) //K8 SiH4 + e -> SiH3- + H
+{
+    value_type K8;
+    K8=3.77E-9*pow((Te),-1.627)*exp(-(8.29)/(Te));
+    return K8;
+
+}
+
+value_type k9 (value_type Te) //K9 SiH4 + e -> SiH2- + 2H
+{
+    value_type K9;
+    K9=3.77E-9*pow((Te),-1.627)*exp(-(8.29)/(Te));
+    return K9;
+
+}
+
+value_type k10 (value_type Te) //K10 SiH4 + e -> SiH3+ + H + 2e
+{
+
+    value_type K10;
+    K10= 2.50E2*pow((Te),-2.93)*exp(-(24.1)/(Te));
+    return K10;
+
+}
+
+value_type k11 (value_type Te) //K11 SiH3 + e -> SiH2- + H
+{
+
+    value_type K11;
+    K11= 5.71E-9*pow((Te),-0.5)*exp(-(1.94)/(Te));
+    return K11;
+
+}
+
+value_type k12 (value_type Te) //K12 SiH3 + e -> SiH3+  + 2e
+{
+    value_type K12;
+    K12= 2.26E-16*pow((Te),0.5)*exp(-(1.30)/(Te));
+    return K12;
+
+}
+
+value_type k13 (value_type Te) //K13 SiH3- + e -> SiH3 + 2e
+{
+    value_type K13;
+    K13=3.15E-16*pow((Te),0.5)*exp(-(1.16)/(Te));
+    return K13;
+
+}
+
+value_type k14 (value_type Te) //K14 SiH2- + e -> SiH2  + 2e
+{
+
+    value_type K14;
+    K14= 3.15E-16*pow((Te),0.5)*exp(-(1.16)/(Te));
+    return K14;
+
+}
+
+value_type k15 (value_type Te) //K15 SiH2 + e -> SiH2-
+{
+    value_type K15;
+    K15=5.71E-16*pow((Te),-0.5);
+    return K15;
+
+}
+
+value_type k16 (value_type Te) //K16 H2 + e ->  2H + e
+{
+    value_type K16;
+    K16=4.73E-14*pow((Te),-0.23)*exp(-(10.09)/(Te));
+    return K16;
+
+}
+
+value_type k17 (value_type Te) //K17 H2 + e ->  H2+ + 2e
+{
+    value_type K17;
+    K17=1.1E-14*pow((Te),0.42)*exp(-(16.05)/(Te));
+    return K17;
+
+}
+
+value_type k18(value_type Tg) //K18 SiH4 + Ar* -> SiH3 + H + Ar
+{
+    value_type K18;
+    K18 = 1.400e-16;
+    return K18;
+}
+
+value_type k19(value_type Tg)
+{
+    value_type K19;
+    K19=2.591e-16;
+    return K19;
+}
+
+value_type k20(value_type Tg)
+{
+    value_type K20;
+    K20= 99.67e-18;
+    return K20;
+}
+
+value_type k21(value_type Tg)
+{
+    value_type K21;
+    K21= 9.963e-17;
+    return K21;
+}
+
+value_type k22(value_type Tg)
+{
+    value_type K22;
+    K22= 6.974e-17;
+    return K22;
+}
+
+value_type k23 (value_type Tg) //k23(Tg)%K23 SiH3 + SiH3 -> SiH2 + SiH4
+{
+    value_type K23;
+    K23= 2.99e-17;
+    return K23;
+}
+
+value_type k24 (value_type Tg) //K24 SiH4 + SIH3 -> Si2H5 + H2
+{
+
+    value_type K24;
+    K24=2.94e-18*exp(-0.1908/Tg);
+    return K24;
+}
+
+value_type k25 (value_type Tg) //K25 SiH2 + H2 -> SiH4
+{
+    value_type K25;
+    K25=2.e-19 ;
+    return K25;
+}
+
+value_type k26 (value_type Tg) //K26 SiH2  -> Si + H2
+{
+    value_type K26;
+    K26=1.51E-9*pow((Tg),1.76)*exp(-(1.66)/(Tg));
+    return K26;
+}
+
+value_type k27 (value_type Tg) //K27 SiH4 + H -> H2 + SiH3
+{
+    value_type K27;
+    K27=2.44E-22*pow((Tg),1.9)*exp(-(0.09)/(Tg));
+    return K27;
+}
+
+value_type k28 (value_type Tg) //K28 SiH2 + SiH2 -> Si2H2 + H2
+{
+    value_type K28;
+    K28=1.08e-15 ;
+    return K28;
+}
+
+value_type k29 (value_type Tg) //K29 SiH2 + H -> SiH + H2
+{
+    value_type K29;
+    K29=2.31e-17;
+    return K29;
+}
+
+value_type k30 (value_type Tg) //K30 SiH3-> SiH + H2
+{
+    value_type K30;
+    K30=328.9E-6*pow((Tg),-3.1)*exp(-(1.94)/(Tg));
+    return K30;
+}
+
+value_type k31 (value_type Tg) //K31 SiH3 + H -> SiH2 + H2
+{
+    value_type K31;
+    K31=2.49E-17*exp(-(0.11)/(Tg));
+    return K31;
+}
+
+value_type k32 (value_type Tg) //K32 SiH2- + H2+ -> SiH2 + H2
+{
+    value_type K32;
+    K32= 5.55E-12*pow((Tg),-0.5);
+    return K32;
+}
+
+value_type k33 (value_type Tg) //K33 SiH3- + H2+ -> SiH3 + H2
+{
+    value_type K33;
+    K33=5.55E-12*pow((Tg),-0.5);
+    return K33;
+}
+
+value_type k34 (value_type Tg) //K34 SiH3- +H2+ -> SiH3 + H2
+{
+    value_type K34;
+    K34=2.11e-20;
+    return K34;
+}
+
+value_type k35 (value_type Tg) //K35 SiH3- + SiH3+ -> Si2H6
+{
+    value_type K35;
+    K35= 2.11e-20*0.5 ;
+    return K35;
+}
+
+value_type k36 (value_type Tg) //K36 SiH2- + SiH4 -> Si2H4- + H2
+{
+    value_type K36;
+    K36= 2.11e-20;
+    return K36;
+}
+
+value_type k37 (value_type Tg) //K37 SiH2- + SiH3 -> SiH2 + SiH3-
+{
+    value_type K37;
+    K37=2.11e-20 ;
+    return K37;
+}
+
+value_type k38 (value_type Tg) //K38 SiH3- + SiH2 -> Si2H3- + H2
+{
+    value_type K38;
+    K38=2.11e-20 ;
+    return K38;
+}
+
+value_type k39 (value_type Tg) //K39 SiH3- + SiH4 -> Si2H5- + H2
+{
+    value_type K39;
+    K39=2.11e-20 ;
+    return K39;
+}
+
+value_type k40 (value_type Tg) //K40 SiH2- + SiH3+ -> Si2H5
+{
+    value_type K40;
+    K40=2.11e-20 ;
+    return K40;
+}
+
+value_type k41 (value_type Tg) //K41 SiH2- + Ar+ -> SiH2 + Ar
+{
+    value_type K41;
+    K41=1.44e-12*pow((Tg),-0.5);
+    return K41;
+}
+
+value_type k42 (value_type Tg) //K42 SiH3- + Ar+ -> SiH3 + Ar
+{
+    value_type K42;
+    K42=1.44E-12*pow((Tg),-0.5);
+    return K42;
+}
+
+value_type k43 (value_type Te) //K43 SiH3 + e ->  SiH3-
+{
+    value_type K43;
+    K43=5.71E-16*pow((Te),-0.5);
+    return K43;
+
+}
+
+value_type k44 (value_type Te) //K44 SiH + e ->  SiH-
+{
+    value_type K44;
+    K44=5.71E-15*pow((Te),-0.5);
+    return K44;
+
+}
+
+value_type k45 (value_type Te) //K45 SiH- + e ->  SiH + 2e
+{
+    value_type K45;
+    K45=3.16E-16*pow((Te),0.5)*exp(-(1.25)/(Te));
+    return K45;
+
+}
+
+value_type k46 (value_type Tg) //K46 SiH2- + SiH ->  SiH2 + SiH2m
+{
+    value_type K46;
+    K46=2.31e-17;
+    return K46;
+}
+
+value_type k47 (value_type Tg) //K47 SiH- + H2p ->  SiH + H2
+{
+    value_type K47;
+    K47= 3.21e-13;
+    return K47;
+}
+
+
+value_type k58 (value_type Tg) //K58 SiH3- + SiH3+ ->  Si2H4 + H2
+{
+    value_type K58;
+    K58=  4.87E-13*0.5*pow((Tg),-0.5);
+    return K58;
+}
+
+struct Condition
+{
+  value_type tol=1.e-9;
+  bool operator() (value_type min, value_type max)  {
+    return abs(min - max) <= tol;
+  }
+};
+//!  Diffusion class
+/*!
+  The constructor calls init, which initializes the free diffusion
+  coefficients.
+  The update function computes the diffusion coefficients given a
+  state n
+*/
+class Diffusion
+{
+public:
+  /**
+   *  Constructor, calls init
+   **/
+  Diffusion() {
+    init();
+  }
+
+  /**
+   *  Initialization of diffusion and mobility
+   **/
+  void init() {
+    DL_Arp=DL(d_Arp,m_Arp);
+    DL_e=DL(d_e,m_e);
+    DL_Armet=DL(d_Armet,m_Armet);
+    DL_SiH3m=0.0;
+    DL_SiH2m=0.0;
+    DL_SiH3p=DL(d_SiH3p,m_SiH3p);
+    DL_H2p=DL(d_H2p,m_H2p);
+    DL_Si2H4m=0.0;
+    DL_Si2H3m=0.0;
+    DL_Si2H5m=0.0;
+    DL_SiHm=0.0;
+    mu_e=mu(DL_e);
+    mu_Arp=mu(DL_Arp);
+    mu_Armet=mu(DL_Armet);
+    mu_SiH3m=mu(DL_SiH3m);
+    mu_SiH2m=mu(DL_SiH2m);
+    mu_SiH3p=mu(DL_SiH3p);
+    mu_H2p=mu(DL_H2p);
+    mu_Si2H4m=mu(DL_Si2H4m);
+    mu_Si2H3m=mu(DL_Si2H3m);
+    mu_Si2H5m=mu(DL_Si2H5m);
+    mu_SiHm=mu(DL_SiHm);
+  }
+
+  //! Update
+  /*!
+    updates the diffusion coefficients for a given n
+  */
+  void update(const state_type &n)
+  {
+    // updat Da
+    /*0=e, 1=Armet, 2=SiH3-, 3=SiH2-, 4=SiH3+, 5=SiH4, 6=SiH3,
+ 7=H, 8=SiH2, 9=H2, 10=H2+, 11=Si2H5, 12=Si2H2, 13=Si2H4-,
+ 14=Si2H6, 15=Si2H3-, 16=Si2H5-, 17=SiH-, 18=SiH, 19=Si, 20=Arp, 21=Si2H4 */
+
+    Da_e=(DL_e*(mu_Arp*n[20] + mu_SiH3m*n[2] + mu_SiH2m*n[3]
+        + mu_SiH3p*n[4] + mu_H2p*n[10] + mu_Si2H4m*n[13]
+        + mu_Si2H3m*n[15] + mu_Si2H5m*n[16] + mu_SiHm*n[17])
+        +mu_e*(DL_Arp*n[20] - DL_SiH3m*n[2] - DL_SiH2m*n[3]
+        + DL_SiH3p*n[4] + DL_H2p*n[10] - DL_Si2H4m*n[13]
+        - DL_Si2H3m*n[15] - DL_Si2H5m*n[16] -DL_SiHm*n[17]))
+        /(mu_e*n[0] + mu_Arp*n[20] + mu_SiH3m*n[2] + mu_SiH2m*n[3]
+        + mu_SiH3p*n[4] + mu_H2p*n[10] + mu_Si2H4m*n[13]
+        + mu_Si2H3m*n[15] + mu_Si2H5m*n[16]+mu_SiHm*n[17]);
+
+    Da_Arp=(DL_Arp*(mu_e*n[0] + mu_SiH3m*n[2] + mu_SiH2m*n[3]
+          + mu_SiH3p*n[4] + mu_H2p*n[10] + mu_Si2H4m*n[13]
+          + mu_Si2H3m*n[15] + mu_Si2H5m*n[16]+ mu_SiHm*n[17])
+          -mu_Arp*(-DL_e*n[0] - DL_SiH3m*n[2] - DL_SiH2m*n[3]
+          + DL_SiH3p*n[4] + DL_H2p*n[10] - DL_Si2H4m*n[13]
+          - DL_Si2H3m*n[15] - DL_Si2H5m*n[16] -DL_SiHm*n[17]))
+          /(mu_e*n[0] + mu_Arp*n[20] + mu_SiH3m*n[2] + mu_SiH2m*n[3]
+          + mu_SiH3p*n[4] + mu_H2p*n[10] + mu_Si2H4m*n[13]
+          + mu_Si2H3m*n[15] + mu_Si2H5m*n[16] +mu_SiHm*n[17]);
+
+    Da_SiH3m=(DL_SiH3m*(mu_Arp*n[20] + mu_e*n[0] + mu_SiH2m*n[3]
+            + mu_SiH3p*n[4] + mu_H2p*n[10] + mu_Si2H4m*n[13]
+            + mu_Si2H3m*n[15] + mu_Si2H5m*n[16] +mu_SiHm*n[17])
+            +mu_SiH3m*(DL_Arp*n[20] - DL_e*n[0] - DL_SiH2m*n[3]
+            + DL_SiH3p*n[4] + DL_H2p*n[10] - DL_Si2H4m*n[13]
+            - DL_Si2H3m*n[15] - DL_Si2H5m*n[16] -DL_SiHm*n[17]))
+            /(mu_e*n[0] + mu_Arp*n[20] + mu_SiH3m*n[2] + mu_SiH2m*n[3]
+            + mu_SiH3p*n[4] + mu_H2p*n[10] + mu_Si2H4m*n[13]
+            + mu_Si2H3m*n[15] + mu_Si2H5m*n[16] + mu_SiHm*n[17]);
+
+
+    Da_SiH2m=(DL_SiH2m*(mu_Arp*n[20] + mu_e*n[0] + mu_SiH3m*n[2]
+            + mu_SiH3p*n[4] + mu_H2p*n[10] + mu_Si2H4m*n[13]
+            + mu_Si2H3m*n[15] + mu_Si2H5m*n[16] +mu_SiHm*n[17])
+            +mu_SiH2m*(DL_Arp*n[20] - DL_e*n[0] - DL_SiH3m*n[2]
+            + DL_SiH3p*n[4] + DL_H2p*n[10] - DL_Si2H4m*n[13]
+            - DL_Si2H3m*n[15] - DL_Si2H5m*n[16] -DL_SiHm*n[17]))
+            /(mu_e*n[0] + mu_Arp*n[20] + mu_SiH3m*n[2] + mu_SiH2m*n[3]
+            + mu_SiH3p*n[4] + mu_H2p*n[10] + mu_Si2H4m*n[13]
+            + mu_Si2H3m*n[15] + mu_Si2H5m*n[16] +mu_SiHm*n[17]);
+
+    Da_SiH3p=(DL_SiH3p*(mu_e*n[0] + mu_SiH3m*n[2] + mu_SiH2m*n[3]
+          + mu_Arp*n[20] + mu_H2p*n[10] + mu_Si2H4m*n[13]
+          + mu_Si2H3m*n[15] + mu_Si2H5m*n[16] +mu_SiHm*n[17])
+          -mu_SiH3p*(-DL_e*n[0] - DL_SiH3m*n[2] - DL_SiH2m*n[3]
+          + DL_Arp*n[20] + DL_H2p*n[10] - DL_Si2H4m*n[13]
+          - DL_Si2H3m*n[15] - DL_Si2H5m*n[16] -DL_SiHm*n[17]))
+          /(mu_e*n[0] + mu_Arp*n[20] + mu_SiH3m*n[2] + mu_SiH2m*n[3]
+          + mu_SiH3p*n[4] + mu_H2p*n[10] + mu_Si2H4m*n[13]
+          + mu_Si2H3m*n[15] + mu_Si2H5m*n[16] +mu_SiHm*n[17]);
+
+    Da_H2p=(DL_H2p*(mu_e*n[0] + mu_SiH3m*n[2] + mu_SiH2m*n[3]
+          + mu_Arp*n[20] + mu_SiH3p*n[4] + mu_Si2H4m*n[13]
+          + mu_Si2H3m*n[15] + mu_Si2H5m*n[16] +mu_SiHm*n[17])
+          -mu_H2p*(-DL_e*n[0] - DL_SiH3m*n[2] - DL_SiH2m*n[3]
+          + DL_Arp*n[20] + DL_SiH3p*n[4] - DL_Si2H4m*n[13]
+          - DL_Si2H3m*n[15] - DL_Si2H5m*n[16] -DL_SiHm*n[17]))
+          /(mu_e*n[0] + mu_Arp*n[20] + mu_SiH3m*n[2] + mu_SiH2m*n[3]
+          + mu_SiH3p*n[4] + mu_H2p*n[10] + mu_Si2H4m*n[13]
+          + mu_Si2H3m*n[15] + mu_Si2H5m*n[16] +mu_SiHm*n[17]);
+
+    Da_Si2H4m=(DL_Si2H4m*(mu_Arp*n[20] + mu_e*n[0] + mu_SiH3m*n[2]
+            + mu_SiH3p*n[4] + mu_H2p*n[10] + mu_SiH3m*n[2]
+            + mu_Si2H3m*n[15] + mu_Si2H5m*n[16] +mu_SiHm*n[17])
+            +mu_Si2H4m*(DL_Arp*n[20] - DL_e*n[0] - DL_SiH3m*n[2]
+            + DL_SiH3p*n[4] + DL_H2p*n[10] - DL_SiH3m*n[2]
+            - DL_Si2H3m*n[15] - DL_Si2H5m*n[16] -DL_SiHm*n[17]))
+            /(mu_e*n[0] + mu_Arp*n[20] + mu_SiH3m*n[2] + mu_SiH2m*n[3]
+            + mu_SiH3p*n[4] + mu_H2p*n[10] + mu_Si2H4m*n[13]
+            + mu_Si2H3m*n[15] + mu_Si2H5m*n[16] +mu_SiHm*n[17]);
+
+    Da_Si2H3m=(DL_Si2H3m*(mu_Arp*n[20] + mu_e*n[0] + mu_SiH3m*n[2]
+            + mu_SiH3p*n[4] + mu_H2p*n[10] + mu_SiH3m*n[2]
+            + mu_Si2H4m*n[13] + mu_Si2H5m*n[16] +mu_SiHm*n[17])
+            +mu_Si2H3m*(DL_Arp*n[20] - DL_e*n[0] - DL_SiH3m*n[2]
+            + DL_SiH3p*n[4] + DL_H2p*n[10] - DL_SiH3m*n[2]
+            - DL_Si2H4m*n[13] - DL_Si2H5m*n[16] -DL_SiHm*n[17]))
+            /(mu_e*n[0] + mu_Arp*n[20] + mu_SiH3m*n[2] + mu_SiH2m*n[3]
+            + mu_SiH3p*n[4] + mu_H2p*n[10] + mu_Si2H4m*n[13]
+            + mu_Si2H3m*n[15] + mu_Si2H5m*n[16] +mu_SiHm*n[17]);
+
+    Da_Si2H5m=(DL_Si2H5m*(mu_Arp*n[20] + mu_e*n[0] + mu_SiH3m*n[2]
+              + mu_SiH3p*n[4] + mu_H2p*n[10] + mu_SiH3m*n[2]
+              + mu_Si2H3m*n[15] + mu_Si2H4m*n[13] +mu_SiHm*n[17])
+              +mu_Si2H5m*(DL_Arp*n[20] - DL_e*n[0] - DL_SiH3m*n[2]
+              + DL_SiH3p*n[4] + DL_H2p*n[10] - DL_SiH3m*n[2]
+              - DL_Si2H3m*n[15] - DL_Si2H4m*n[13] -DL_SiHm*n[17]))
+              /(mu_e*n[0] + mu_Arp*n[20] + mu_SiH3m*n[2] + mu_SiH2m*n[3]
+              + mu_SiH3p*n[4] + mu_H2p*n[10] + mu_Si2H4m*n[13]
+              + mu_Si2H3m*n[15] + mu_Si2H5m*n[16] +mu_SiHm*n[17]);
+
+    Da_SiHm=(DL_SiHm*(mu_Arp*n[20] + mu_e*n[0] + mu_SiH3m*n[2]
+          + mu_SiH3p*n[4] + mu_H2p*n[10] + mu_SiH3m*n[2]
+          + mu_Si2H3m*n[15] + mu_Si2H4m*n[13] +mu_Si2H5m*n[16])
+          +mu_SiHm*(DL_Arp*n[20] - DL_e*n[0] - DL_SiH3m*n[2]
+          + DL_SiH3p*n[4] + DL_H2p*n[10] - DL_SiH3m*n[2]
+          - DL_Si2H3m*n[15] - DL_Si2H4m*n[13] -DL_Si2H5m*n[16]))
+          /(mu_e*n[0] + mu_Arp*n[20] + mu_SiH3m*n[2] + mu_SiH2m*n[3]
+          + mu_SiH3p*n[4] + mu_H2p*n[10] + mu_Si2H4m*n[13]
+          + mu_Si2H3m*n[15] + mu_Si2H5m*n[16] +mu_SiHm*n[17]);
+
+}
+  // free diffusion and mobility
+  value_type DL_Arp;
+  value_type DL_e;
+  value_type DL_Armet;
+  value_type DL_SiH3m;
+  value_type DL_SiH2m;
+  value_type DL_SiH3p;
+  value_type DL_H2p;
+  value_type DL_Si2H4m;
+  value_type DL_Si2H3m;
+  value_type DL_Si2H5m;
+  value_type DL_SiHm;
+  value_type mu_e;
+  value_type mu_Arp;
+  value_type mu_Armet;
+  value_type mu_SiH3m;
+  value_type mu_SiH2m;
+  value_type mu_SiH3p;
+  value_type mu_H2p;
+  value_type mu_Si2H4m;
+  value_type mu_Si2H3m;
+  value_type mu_Si2H5m;
+  value_type mu_SiHm;
+
+  // dependent diffusion
+  value_type Da_e;
+  value_type Da_Arp;
+  value_type Da_SiH3m;
+  value_type Da_SiH2m;
+  value_type Da_SiH3p;
+  value_type Da_H2p;
+  value_type Da_Si2H4m;
+  value_type Da_Si2H3m;
+  value_type Da_Si2H5m;
+  value_type Da_SiHm;
+
+
+};
+
+struct nsystem
+{
+  void operator()(const state_type &n, state_type &dndt, const value_type &t)
+  {
+
+    // update the diffusion
+    diffusion.update(n);
+
+    /*0=e, 1=Armet, 2=SiH3-, 3=SiH2-, 4=SiH3+, 5=SiH4, 6=SiH3,
+    7=H, 8=SiH2, 9=H2, 10=H2+, 11=Si2H5, 12=Si2H2, 13=Si2H4-,
+    14=Si2H6, 15=Si2H3-, 16=Si2H5-, 17=SiH-, 18=SiH, 19=Si, 20=Arp, 21=Si2H4*/
+
+    dndt[0]=k1(Te)*n_Ar*n[0] +k3(Te)*n[1]*n[0] +k4(Te)*pow(n[1],2) -k8(Te)*n[5]*n[0]
+        -k9(Te)*n[5]*n[0] +k10(Te)*n[5]*n[0] -k11(Te)*n[6]*n[0] +k12(Te)*n[0]*n[6]
+        +k13(Te)*n[2]*n[0] +k14(Te)*n[3]*n[0] -k15(Te)*n[0]*n[8] +k17(Te)*n[9]*n[0]
+        -k43(Te)*n[6]*n[0]-k44(Te)*n[18]*n[0] +k45(Te)*n[0]*n[17]- diffusion.Da_e*diff*n[0];
+
+    dndt[1]= k2(Te)*n_Ar*n[0] -k3(Te)*n[1]*n[0] -2*k4(Te)*pow(n[1],2) -k5(Te)*n[1]*n[0]
+        -k18(Tg)*n[1]*n[5] -k19(Tg)*n[1]*n[5] -k20(Tg)*n[6]*n[1] -k21(Tg)*n[8]*n[1]
+        -k22(Tg)*n[9]*n[1]-D_Amet*diff*n[1];
+
+    dndt[2]= k8(Te)*n[5]*n[0] -k13(Te)*n[2]*n[0] -k33(Tg)*n[2]*n[10] -k34(Tg)*n[2]*n[6]
+        -k35(Tg)*n[2]*n[4] + k37(Tg)*n[3]*n[6] -k38(Tg)*n[2]*n[8] -k39(Tg)*n[2]*n[5]
+        -k42(Tg)*n[2]*n[20] + k43(Te)*n[6]*n[0]  -k58(Tg)*n[2]*n[4]-diffusion.Da_SiH3m*diff*n[2];
+
+    dndt[3]= k9(Te)*n[5]*n[0] +k11(Te)*n[6]*n[0] -k14(Te)*n[3]*n[0] +k15(Te)*n[0]*n[8]
+        -k32(Tg)*n[3]*n[10] -k36(Tg)*n[3]*n[5] -k37(Tg)*n[3]*n[6] -k40(Tg)*n[3]*n[4]
+        -k41(Tg)*n[3]*n[20] - k46(Tg)*n[3]*n[18]-diffusion.Da_SiH2m*n[3]*diff;
+
+    dndt[4]=k10(Te)*n[5]*n[0] +k12(Te)*n[0]*n[6] -k35(Tg)*n[2]*n[4] -k40(Tg)*n[3]*n[4]
+	-k58(Tg)*n[2]*n[4] -diffusion.Da_SiH3p*n[4]*diff;
+
+    dndt[5]= C-k6(Te)*n[5]*n[0] -k7(Te)*n[0]*n[5] -k8(Te)*n[5]*n[0] -k9(Te)*n[5]*n[0]
+        -k10(Te)*n[5]*n[0] -k18(Tg)*n[5]*n[1] -k19(Tg)*n[1]*n[5] +k23(Tg)*pow(n[6],2)
+        -k24(Tg)*n[5]*n[6] +k25(Tg)*n[8]*n[9] -k27(Tg)*n[5]*n[7] -k36(Tg)*n[3]*n[5]
+        -k39(Tg)*n[2]*n[5] ;
+
+    dndt[6]= k6(Te)*n[5]*n[0] -k11(Te)*n[6]*n[0] -k12(Te)*n[0]*n[6] +k13(Te)*n[2]*n[0]
+        +k18(Tg)*n[5]*n[1] -k20(Tg)*n[6]*n[1] -2*k23(Tg)*pow(n[6],2) -k24(Tg)*n[5]*n[6]
+        +k27(Tg)*n[5]*n[7] -k30(Tg)*n[6] -k31(Tg)*n[6]*n[7] +k33(Tg)*n[2]*n[10]
+	-k34(Tg)*n[2]*n[6]
+        -k37(Tg)*n[3]*n[6] +k42(Tg)*n[2]*n[20]-k43(Te)*n[6]*n[0] ;
+
+    dndt[7]=  k6(Te)*n[5]*n[0] +2*k7(Te)*n[0]*n[5] +k8(Te)*n[5]*n[0] +2*k9(Te)*n[5]*n[0]
+        +k10(Te)*n[5]*n[0] +k11(Te)*n[6]*n[0] +2*k16(Te)*n[9]*n[0] +k18(Tg)*n[5]*n[1]
+        +2*k19(Tg)*n[1]*n[5] +k20(Tg)*n[6]*n[1] +k21(Tg)*n[8]*n[1] +2*k22(Tg)*n[9]*n[1]
+        -k27(Tg)*n[5]*n[7] -k29(Tg)*n[8]*n[7] -k31(Tg)*n[6]*n[7];
+
+    dndt[8]= k7(Te)*n[0]*n[5] +k14(Te)*n[3]*n[0] -k15(Te)*n[0]*n[8] +k19(Tg)*n[1]*n[5]
+        +k20(Tg)*n[6]*n[1] -k21(Tg)*n[8]*n[1] +k23(Tg)*pow(n[6],2) -k25(Tg)*n[8]*n[9]
+        -k26(Tg)*n[8] -2*k28(Tg)*pow(n[8],2) -k29(Tg)*n[8]*n[7] +k31(Tg)*n[6]*n[7]
+	+k32(Tg)*n[3]*n[10]
+        +k37(Tg)*n[3]*n[6] -k38(Tg)*n[2]*n[8] +k41(Tg)*n[3]*n[20] +k46(Tg)*n[3]*n[18];
+
+    dndt[9]=-k16(Te)*n[9]*n[0] -k17(Te)*n[9]*n[0] -k22(Tg)*n[9]*n[1] +k24(Tg)*n[5]*n[6]
+        -k25(Tg)*n[8]*n[9] +k26(Tg)*n[8] +k27(Tg)*n[5]*n[7] +k28(Tg)*pow(n[8],2) +k29(Tg)
+	*n[8]*n[7]+k30(Tg)*n[6] +k31(Tg)*n[6]*n[7] +k32(Tg)*n[3]*n[10] +k33(Tg)*n[2]*n[10]
+	+k34(Tg)*n[2]*n[6]+ k36(Tg)*n[3]*n[5] +k38(Tg)*n[2]*n[8] +k39(Tg)*n[2]*n[5]
+	+k47(Tg)*n[17]*n[10]
+	+k58(Tg)*n[2]*n[4];
+
+    dndt[10]= k17(Te)*n[9]*n[0] -k32(Tg)*n[3]*n[10] -k33(Tg)*n[2]*n[10] -k47(Tg)*n[17]*n[10]
+	-diffusion.Da_H2p*diff*n[10];
+
+    dndt[11]= k24(Tg)*n[5]*n[6] +k40(Tg)*n[3]*n[4];
+
+    dndt[12]=k28(Tg)*pow(n[8],2);
+
+    dndt[13]= k34(Tg)*n[2]*n[6] +k36(Tg)*n[3]*n[5]-diffusion.Da_Si2H4m*diff*n[13] ;
+
+    dndt[14]= k35(Tg)*n[2]*n[4] ;
+
+    dndt[15]= k38(Tg)*n[2]*n[8]-diffusion.Da_Si2H3m*diff*n[15];
+
+    dndt[16]= k39(Tg)*n[2]*n[5] -diffusion.Da_Si2H5m*diff*n[16];
+
+    dndt[17]= k44(Te)*n[18]*n[0] -k45(Te)*n[0]*n[17] +k46(Tg)*n[3]*n[18] -k47(Tg)*n[17]*n[10]
+	-diffusion.Da_SiHm*n[17]*diff;
+
+    dndt[18]= k21(Tg)*n[8]*n[1] +k29(Tg)*n[8]*n[7] +k30(Tg)*n[6]
+        -k44(Te)*n[18]*n[0] +k45(Te)*n[0]*n[17] -k46(Tg)*n[3]*n[18] +k47(Tg)*n[17]*n[10];
+
+    dndt[19]=k26(Tg)*n[8];
+
+    dndt[20]=k1(Te)*n_Ar*n[0] +k3(Te)*n[1]*n[0] +k4(Te)*pow(n[1],2)
+        -k41(Tg)*n[3]*n[20]-k42(Tg)*n[2]*n[20]-diffusion.Da_Arp*n[20]*diff;
+
+    dndt[21]=+k58(Tg)*n[2]*n[4];
+  }
+
+  value_type Te;
+
+  Diffusion diffusion;
+};
+
+struct jacobian
+{
+  void operator()(const state_type &n, matrix_type &jacobi,
+                  const value_type &t, state_type &dfdt ) const
+  {
+    jacobi( 0 , 0 )=k1(Te)*n_Ar +k3(Te)*n[1]  -k8(Te)*n[5]
+        -k9(Te)*n[5] +k10(Te)*n[5] -k11(Te)*n[6] +k12(Te)*n[6]
+        +k13(Te)*n[2] +k14(Te)*n[3] -k15(Te)*n[8] +k17(Te)*n[9]
+        -k43(Te)*n[6]-k44(Te)*n[18] +k45(Te)*n[17]- diffusion.Da_e*diff;
+    jacobi( 0 , 1 )=  +k3(Te)*n[0] +k4(Te)*n[1] ;
+    jacobi( 0 , 2 )= +k13(Te)*n[0] ;
+    jacobi( 0 , 3 )= +k14(Te)*n[0] ;
+    jacobi( 0 , 4 )= 0.0;
+    jacobi( 0 , 5 )= -k8(Te)*n[0] -k9(Te)*n[0] +k10(Te)*n[0] ;
+    jacobi( 0 , 6 )=-k11(Te)*n[0] +k12(Te)*n[0]-k43(Te)*n[0];
+    jacobi( 0 , 7 )=0.0;
+    jacobi( 0 , 8 )=-k15(Te)*n[0] ;
+    jacobi( 0 , 9 )=+k17(Te)*n[0];
+    jacobi( 0 , 10 )=0.0;
+    jacobi( 0 , 11 )=0.0;
+    jacobi( 0 , 12 )=0.0;
+    jacobi( 0 , 13 )=0.0;
+    jacobi( 0 , 14 )=0.0;
+    jacobi( 0 , 15 )=0.0;
+    jacobi( 0 , 16 )=0.0;
+    jacobi( 0 , 17 )= +k45(Te)*n[0];
+    jacobi( 0 , 18 )=-k44(Te)*n[0] ;
+    jacobi( 0 , 19 )=0.0;
+    jacobi( 0 , 20 )=0.0;
+    jacobi( 0 , 21 )=0.0;
+    jacobi( 1 , 0 ) = k2(Te)*n_Ar -k3(Te)*n[1]  -k5(Te)*n[1];
+    jacobi( 1 , 1 ) =  -k3(Te)*n[0] -2*k4(Te)*n[1] -k5(Te)*n[0]
+        -k18(Tg)*n[5] -k19(Tg)*n[5] -k20(Tg)*n[6] -k21(Tg)*n[8]
+        -k22(Tg)*n[9]-D_Amet*diff;
+    jacobi( 1 , 2 ) = 0.0;
+    jacobi( 1 , 3 ) = 0.0;
+    jacobi( 1 , 4 ) = 0.0;
+    jacobi( 1 , 5 ) =-k18(Tg)*n[1] -k19(Tg)*n[1] ;
+    jacobi( 1 , 6 ) =  -k20(Tg)*n[1] ;
+    jacobi( 1 , 7 ) = 0.0;
+    jacobi( 1 , 8 ) =  -k21(Tg)*n[1];
+    jacobi( 1 , 9 ) = -k22(Tg)*n[1];
+    jacobi( 1 , 10 ) = 0.0;
+    jacobi( 1 , 11 ) =0.0;
+    jacobi( 1 , 12 ) = 0.0;
+    jacobi( 1 , 13 ) = 0.0;
+    jacobi( 1 , 14 ) =0.0;
+    jacobi( 1 , 15 ) = 0.0;
+    jacobi( 1 , 16 ) =0.0;
+    jacobi( 1 , 17 ) = 0.0;
+    jacobi( 1 , 18 ) = 0.0;
+    jacobi( 1 , 19 ) =0.0;
+    jacobi( 1 , 20 ) = 0.0;
+    jacobi( 1 , 21 ) = 0.0;
+    jacobi( 2 , 0 ) = k8(Te)*n[5] -k13(Te)*n[2]  + k43(Te)*n[6];
+    jacobi( 2 , 1 ) = 0.0;
+    jacobi( 2 , 2 ) =  -k13(Te)*n[0] -k33(Tg)*n[10] -k34(Tg)*n[6]
+        -k35(Tg)*n[4]  -k38(Tg)*n[8] -k39(Tg)*n[5]
+        -k42(Tg)*n[20]  -k58(Tg)*n[4]-diffusion.Da_SiH3m*diff;
+    jacobi( 2 , 3 ) = + k37(Tg)*n[6] ;
+    jacobi( 2 , 4 ) = -k35(Tg)*n[2] -k58(Tg)*n[2];
+    jacobi( 2 , 5 ) = k8(Te)*n[0] -k39(Tg)*n[2];
+    jacobi( 2 , 6 ) =  -k34(Tg)*n[2]+ k37(Tg)*n[3] + k43(Te)*n[0];
+    jacobi( 2 , 7 ) = 0.0;
+    jacobi( 2 , 8 ) =  -k38(Tg)*n[2] ;
+    jacobi( 2 , 9 ) = 0.0;
+    jacobi( 2 , 10 ) =  -k33(Tg)*n[2];
+    jacobi( 2 , 11 ) = 0.0;
+    jacobi( 2 , 12 ) = 0.0;
+    jacobi( 2 , 13 ) = 0.0;
+    jacobi( 2 , 14 ) = 0.0;
+    jacobi( 2 , 15 ) = 0.0;
+    jacobi( 2 , 16 ) = 0.0;
+    jacobi( 2 , 17 ) = 0.0;
+    jacobi( 2 , 18 ) = 0.0;
+    jacobi( 2 , 19 ) = 0.0;
+    jacobi( 2 , 20 ) = -k42(Tg)*n[2];
+    jacobi( 2 , 21 ) = 0.0;
+    jacobi( 3 , 0 ) = k9(Te)*n[5] +k11(Te)*n[6] -k14(Te)*n[3] +k15(Te)*n[8];
+    jacobi( 3 , 1 ) = 0.0;
+    jacobi( 3 , 2 ) = 0.0;
+    jacobi( 3 , 3 ) =   -k14(Te)*n[0] 
+        -k32(Tg)*n[10] -k36(Tg)*n[5] -k37(Tg)*n[6] -k40(Tg)*n[4]
+        -k41(Tg)*n[20] - k46(Tg)*n[18]-diffusion.Da_SiH2m*diff;
+    jacobi( 3 , 4 ) =  -k40(Tg)*n[3];
+    jacobi( 3 , 5 ) = k9(Te)*n[0]  -k36(Tg)*n[3];
+    jacobi( 3 , 6 ) = +k11(Te)*n[0]  -k37(Tg)*n[3] ;
+    jacobi( 3 , 7 ) = 0.0;
+    jacobi( 3 , 8 ) =  +k15(Te)*n[0];
+    jacobi( 3 , 9 ) = 0.0;
+    jacobi( 3 , 10 ) =-k32(Tg)*n[3];
+    jacobi( 3 , 11 ) = 0.0;
+    jacobi( 3 , 12 ) = 0.0;
+    jacobi( 3 , 13 ) = 0.0;
+    jacobi( 3 , 14 ) = 0.0;
+    jacobi( 3 , 15 ) = 0.0;
+    jacobi( 3 , 16 ) = 0.0;
+    jacobi( 3 , 17 ) = 0.0;
+    jacobi( 3 , 18 ) = - k46(Tg)*n[3];
+    jacobi( 3 , 19 ) = 0.0;
+    jacobi( 3 , 20 ) =-k41(Tg)*n[3];
+    jacobi( 3 , 21 ) =0.0;
+    jacobi( 4 , 0 ) =k10(Te)*n[5] +k12(Te)*n[6] ;
+    jacobi( 4 , 1 ) =0.0;
+    jacobi( 4 , 2 ) = -k35(Tg)*n[4] -k58(Tg)*n[4];
+    jacobi( 4 , 3 ) = -k40(Tg)*n[4];
+    jacobi( 4 , 4 ) =  -k35(Tg)*n[2] -k40(Tg)*n[3]
+	-k58(Tg)*n[2] -diffusion.Da_SiH3p*diff;
+    jacobi( 4 , 5 ) =k10(Te)*n[0] ;
+    jacobi( 4 , 6 ) =+k12(Te)*n[0];
+    jacobi( 4 , 7 ) =0.0;
+    jacobi( 4 , 8 ) =0.0;
+    jacobi( 4 , 9 ) =0.0;
+    jacobi( 4 , 10 ) =0.0;
+    jacobi( 4 , 11 ) =0.0;
+    jacobi( 4 , 12 ) =0.0;
+    jacobi( 4 , 13 ) =0.0;
+    jacobi( 4 , 14 ) =0.0;
+    jacobi( 4 , 15 ) =0.0;
+    jacobi( 4 , 16 ) =0.0;
+    jacobi( 4 , 17 ) =0.0;
+    jacobi( 4 , 18 ) =0.0;
+    jacobi( 4 , 19 ) =0.0;
+    jacobi( 4 , 20 ) =0.0;
+    jacobi( 4 , 21 ) =0.0;
+    jacobi( 5 , 0 ) =-k6(Te)*n[5] -k7(Te)*n[5] -k8(Te)*n[5] -k9(Te)*n[5]-k10(Te)*n[5] ;
+    jacobi( 5 , 1 ) =-k18(Tg)*n[5] -k19(Tg)*n[5];
+    jacobi( 5 , 2 ) =-k39(Tg)*n[5];
+    jacobi( 5 , 3 ) = -k36(Tg)*n[5];
+    jacobi( 5 , 4 ) =0.0;
+    jacobi( 5 , 5 ) =-k6(Te)*n[0] -k7(Te)*n[0] -k8(Te)*n[0] -k9(Te)*n[0]-k10(Te)*n[0]
+    	-k18(Tg)*n[1] -k19(Tg)*n[1] -k24(Tg)*n[6] -k27(Tg)*n[7] -k36(Tg)*n[3]-k39(Tg)*n[2];
+    jacobi( 5 , 6 ) = +2.*k23(Tg)*n[6]-k24(Tg)*n[5] ;
+    jacobi( 5 , 7 ) = -k27(Tg)*n[5];
+    jacobi( 5 , 8 ) = +k25(Tg)*n[9] ;
+    jacobi( 5 , 9 ) =+k25(Tg)*n[8];
+    jacobi( 5 , 10 ) =0.0;
+    jacobi( 5 , 11 ) =0.0;
+    jacobi( 5 , 12 ) =0.0;
+    jacobi( 5 , 13 ) =0.0;
+    jacobi( 5 , 14 ) =0.0;
+    jacobi( 5 , 15 ) =0.0;
+    jacobi( 5 , 16 ) =0.0;
+    jacobi( 5 , 17 ) =0.0;
+    jacobi( 5 , 18 ) =0.0;
+    jacobi( 5 , 19 ) =0.0;
+    jacobi( 5 , 20 ) =0.0;
+    jacobi( 5 , 21 ) =0.0;
+    jacobi( 6 , 0 ) =k6(Te)*n[5] -k11(Te)*n[6]-k12(Te)*n[6] +k13(Te)*n[2]-k43(Te)*n[6];
+    jacobi( 6 , 1 ) =+k18(Tg)*n[5] -k20(Tg)*n[6] ;
+    jacobi( 6 , 2 ) =+k13(Te)*n[0]+k33(Tg)*n[10] -k34(Tg)*n[6] +k42(Tg)*n[20];
+    jacobi( 6 , 3 ) =-k37(Tg)*n[6] ;
+    jacobi( 6 , 4 ) =0.0;
+    jacobi( 6 , 5 ) =k6(Te)*n[0] +k18(Tg)*n[1] -k24(Tg)*n[6]+k27(Tg)*n[7] ;
+    jacobi( 6 , 6 ) = -k11(Te)*n[0] -k12(Te)*n[0]-k20(Tg)*n[1] -2*2.*k23(Tg)*n[6]-k24(Tg)*n[5]
+    	-k30(Tg) -k31(Tg)*n[7]  -k34(Tg)*n[2]-k37(Tg)*n[3] -k43(Te)*n[0];
+    jacobi( 6 , 7 ) =+k27(Tg)*n[5] -k31(Tg)*n[6] ;
+    jacobi( 6 , 8 ) =0.0;
+    jacobi( 6 , 9 ) =0.0;
+    jacobi( 6 , 10 ) =+k33(Tg)*n[2] ;
+    jacobi( 6 , 11 ) =0.0;
+    jacobi( 6 , 12 ) =0.0;
+    jacobi( 6 , 13 ) =0.0;
+    jacobi( 6 , 14 ) =0.0;
+    jacobi( 6 , 15 ) =0.0;
+    jacobi( 6 , 16 ) =0.0;
+    jacobi( 6 , 17 ) =0.0;
+    jacobi( 6 , 18 ) =0.0;
+    jacobi( 6 , 19 ) =0.0;
+    jacobi( 6 , 20 ) =+k42(Tg)*n[2];
+    jacobi( 6 , 21 ) =0.0;
+    jacobi( 7 , 0 ) = k6(Te)*n[5]* +2*k7(Te)*n[5] +k8(Te)*n[5]*+2*k9(Te)*n[5]
+    	+k10(Te)*n[5] +k11(Te)*n[6] +2*k16(Te)*n[9] ;
+    jacobi( 7 , 1 ) = +k18(Tg)*n[5]+2*k19(Tg)*n[5] +k20(Tg)*n[6] +k21(Tg)*n[8] +2*k22(Tg)*n[9];
+    jacobi( 7 , 2 ) =0.0;
+    jacobi( 7 , 3 ) = 0.0;
+    jacobi( 7 , 4 ) = 0.0;
+    jacobi( 7 , 5 ) = k6(Te)*n[0] +2*k7(Te)*n[0] +k8(Te)*n[0] +2*k9(Te)*n[0]
+    	+k10(Te)*n[0] +k18(Tg)*n[1]+2*k19(Tg)*n[1] -k27(Tg)*n[7] ;
+    jacobi( 7 , 6 ) =  +k11(Te)*n[0] +k20(Tg)*n[1] -k31(Tg)*n[7];
+    jacobi( 7 , 7 ) = -k27(Tg)*n[5] -k29(Tg)*n[8] -k31(Tg)*n[6];
+    jacobi( 7 , 8 ) = +k21(Tg)*n[1] -k29(Tg)*n[7] ;
+    jacobi( 7 , 9 ) =  +2*k16(Te)*n[0] +2*k22(Tg)*n[1];
+    jacobi( 7 , 10 ) = 0.0;
+    jacobi( 7 , 11 ) = 0.0;
+    jacobi( 7 , 12 ) = 0.0;
+    jacobi( 7 , 13 ) = 0.0;
+    jacobi( 7 , 14 ) = 0.0;
+    jacobi( 7 , 15 ) = 0.0;
+    jacobi( 7 , 16 ) = 0.0;
+    jacobi( 7 , 17 ) = 0.0;
+    jacobi( 7 , 18 ) = 0.0;
+    jacobi( 7 , 19 ) = 0.0;
+    jacobi( 7 , 20 ) = 0.0;
+    jacobi( 7 , 21 ) = 0.0;
+    jacobi( 8 , 0 ) = k7(Te)*n[5] +k14(Te)*n[3] -k15(Te)*n[8] ;
+    jacobi( 8 , 1 ) =  +k19(Tg)*n[5]+k20(Tg)*n[6] -k21(Tg)*n[8] ;
+    jacobi( 8 , 2 ) = -k38(Tg)*n[8] ;
+    jacobi( 8 , 3 ) = +k14(Te)*n[0] +k32(Tg)*n[10] +k37(Tg)*n[6] +k41(Tg)*n[20] +k46(Tg)*n[18];
+    jacobi( 8 , 4 ) =0.0;
+    jacobi( 8 , 5 ) = k7(Te)*n[0]  +k19(Tg)*n[1];
+    jacobi( 8 , 6 ) = +k20(Tg)*n[1]  +k23(Tg)*2.*n[6]+k31(Tg)*n[7] +k37(Tg)*n[3] ;
+    jacobi( 8 , 7 ) =  -k29(Tg)*n[8]+k31(Tg)*n[6] ;
+    jacobi( 8 , 8 ) =-k15(Te)*n[0]  -k21(Tg)*n[1]  -k25(Tg)*n[9]-k26(Tg)-2*k28(Tg)*2.*n[8]
+    	-k29(Tg)*n[7]-k38(Tg)*n[2] ;
+    jacobi( 8 , 9 ) =  -k25(Tg)*n[8];
+    jacobi( 8 , 10 ) = +k32(Tg)*n[3];
+    jacobi( 8 , 11 ) =0.0;
+    jacobi( 8 , 12 ) =0.0;
+    jacobi( 8 , 13 ) =0.0;
+    jacobi( 8 , 14 ) =0.0;
+    jacobi( 8 , 15 ) =0.0;
+    jacobi( 8 , 16 ) =0.0;
+    jacobi( 8 , 17 ) =0.0;
+    jacobi( 8 , 18 ) =  +k46(Tg)*n[3];
+    jacobi( 8 , 19 ) =0.0;
+    jacobi( 8 , 20 ) = +k41(Tg)*n[3];
+    jacobi( 8 , 21 ) = 0.0;
+    jacobi( 9 , 0 ) =-k16(Te)*n[9] -k17(Te)*n[9];
+    jacobi( 9 , 1 ) = -k22(Tg)*n[9];
+    jacobi( 9 , 2 ) =+k33(Tg)*n[10] +k34(Tg)*n[6] +k38(Tg)*n[8] +k39(Tg)*n[5] 
+	+k58(Tg)*n[4];
+    jacobi( 9 , 3 ) = +k32(Tg)*n[10] + k36(Tg)*n[5];
+    jacobi( 9 , 4 ) =+k58(Tg)*n[2];
+    jacobi( 9 , 5 ) = +k24(Tg)*n[6]+k27(Tg)*n[7] + k36(Tg)*n[3] +k39(Tg)*n[2];
+    jacobi( 9 , 6 ) =+k24(Tg)*n[5]+k30(Tg)+k31(Tg)*n[7] +k34(Tg)*n[2] ;
+    jacobi( 9 , 7 ) =+k27(Tg)*n[5]+k29(Tg)*n[8]+k31(Tg)*n[6];
+    jacobi( 9 , 8 ) =-k25(Tg)*n[9] +k26(Tg)+k28(Tg)*2.*n[8]+k29(Tg)*n[7]+k38(Tg)*n[2];
+    jacobi( 9 , 9 ) =-k16(Te)*n[0] -k17(Te)*n[0] -k22(Tg)*n[1] -k25(Tg)*n[8];
+    jacobi( 9 , 10 ) = +k32(Tg)*n[3] +k33(Tg)*n[2] +k47(Tg)*n[17];
+    jacobi( 9 , 11 ) =0.0;
+    jacobi( 9 , 12 ) =0.0;
+    jacobi( 9 , 13 ) =0.0;
+    jacobi( 9 , 14 ) =0.0;
+    jacobi( 9 , 15 ) =0.0;
+    jacobi( 9 , 16 ) =0.0;
+    jacobi( 9 , 17 ) = +k47(Tg)*n[10];
+    jacobi( 9 , 18 ) =0.0;
+    jacobi( 9 , 19 ) =0.0;
+    jacobi( 9 , 20 ) =0.0;
+    jacobi( 9 , 21 ) =0.0;
+    jacobi( 10 , 0 ) =k17(Te)*n[9] ;
+    jacobi( 10 , 1 ) =0.0;
+    jacobi( 10 , 2 ) =-k33(Tg)*n[10] ;
+    jacobi( 10 , 3 ) =-k32(Tg)*n[10] ;
+    jacobi( 10 , 4 ) =0.0;
+    jacobi( 10 , 5 ) =0.0;
+    jacobi( 10 , 6 ) =0.0;
+    jacobi( 10 , 7 ) =0.0;
+    jacobi( 10 , 8 ) =0.0;
+    jacobi( 10 , 9 ) =k17(Te)*n[0] ;
+    jacobi( 10 , 10 ) = -k32(Tg)*n[3] -k33(Tg)*n[2] -k47(Tg)*n[17]
+	-diffusion.Da_H2p*diff;
+    jacobi( 10 , 11 ) =0.0;
+    jacobi( 10 , 12 ) =0.0;
+    jacobi( 10 , 13 ) =0.0;
+    jacobi( 10 , 14 ) =0.0;
+    jacobi( 10 , 15 ) =0.0;
+    jacobi( 10 , 16 ) =0.0;
+    jacobi( 10 , 17 ) =-k47(Tg)*n[10];
+    jacobi( 10 , 18 ) =0.0;
+    jacobi( 10 , 19 ) =0.0;
+    jacobi( 10 , 20 ) =0.0;
+    jacobi( 10 , 21 ) =0.0;
+    jacobi( 11 , 0 ) =0.0;
+    jacobi( 11 , 1 ) =0.0;
+    jacobi( 11 , 2 ) =0.0;
+    jacobi( 11 , 3 ) =+k40(Tg)*n[4];
+    jacobi( 11 , 4 ) = +k40(Tg)*n[3];
+    jacobi( 11 , 5 ) =k24(Tg)*n[6] ;
+    jacobi( 11 , 6 ) =k24(Tg)*n[5];
+    jacobi( 11 , 7 ) =0.0;
+    jacobi( 11 , 8 ) =0.0;
+    jacobi( 11 , 9 ) =0.0;
+    jacobi( 11 , 10 ) =0.0;
+    jacobi( 11 , 11 ) =0.0;
+    jacobi( 11 , 12 ) =0.0;
+    jacobi( 11 , 13 ) =0.0;
+    jacobi( 11 , 14 ) =0.0;
+    jacobi( 11 , 15 ) =0.0;
+    jacobi( 11 , 16 ) =0.0;
+    jacobi( 11 , 17 ) =0.0;
+    jacobi( 11 , 18 ) =0.0;
+    jacobi( 11 , 19 ) =0.0;
+    jacobi( 11 , 20 ) =0.0;
+    jacobi( 11 , 21 ) =0.0;
+    jacobi( 12 , 0 ) =0.0;
+    jacobi( 12 , 1 ) =0.0;
+    jacobi( 12 , 2 ) =0.0;
+    jacobi( 12 , 3 ) =0.0;
+    jacobi( 12 , 4 ) =0.0;
+    jacobi( 12 , 5 ) =0.0;
+    jacobi( 12 , 6 ) =0.0;
+    jacobi( 12 , 7 ) =0.0;
+    jacobi( 12 , 8 ) =k28(Tg)*2.*n[8];
+    jacobi( 12 , 9 ) =0.0;
+    jacobi( 12 , 10 ) =0.0;
+    jacobi( 12 , 11 ) =0.0;
+    jacobi( 12 , 12 ) =0.0;
+    jacobi( 12 , 13 ) =0.0;
+    jacobi( 12 , 14 ) =0.0;
+    jacobi( 12 , 15 ) =0.0;
+    jacobi( 12 , 16 ) =0.0;
+    jacobi( 12 , 17 ) =0.0;
+    jacobi( 12 , 18 ) =0.0;
+    jacobi( 12 , 19 ) =0.0;
+    jacobi( 12 , 20 ) =0.0;
+    jacobi( 12 , 21 ) =0.0;
+    jacobi( 13 , 0 ) =0.0;
+    jacobi( 13 , 1 ) =0.0;
+    jacobi( 13 , 2 ) =k34(Tg)*n[6];
+    jacobi( 13 , 3 ) = +k36(Tg)*n[5];
+    jacobi( 13 , 4 ) =0.0;
+    jacobi( 13 , 5 ) = +k36(Tg)*n[3] ;
+    jacobi( 13 , 6 ) =k34(Tg)*n[2];
+    jacobi( 13 , 7 ) =0.0;
+    jacobi( 13 , 8 ) =0.0;
+    jacobi( 13 , 9 ) =0.0;
+    jacobi( 13 , 10 ) =0.0;
+    jacobi( 13 , 11 ) =0.0;
+    jacobi( 13 , 12 ) =0.0;
+    jacobi( 13 , 13 ) =-diffusion.Da_Si2H4m*diff ;
+    jacobi( 13 , 14 ) =0.0;
+    jacobi( 13 , 15 ) =0.0;
+    jacobi( 13 , 16 ) =0.0;
+    jacobi( 13 , 17 ) =0.0;
+    jacobi( 13 , 18 ) =0.0;
+    jacobi( 13 , 19 ) =0.0;
+    jacobi( 13 , 20 ) =0.0;
+    jacobi( 13 , 21 ) =0.0;
+    jacobi( 14 , 0 ) =0.0;
+    jacobi( 14 , 1 ) =0.0;
+    jacobi( 14 , 2 ) =k35(Tg)*n[4];
+    jacobi( 14 , 3 ) =0.0;
+    jacobi( 14 , 4 ) =k35(Tg)*n[2];
+    jacobi( 14 , 5 ) =0.0;
+    jacobi( 14 , 6 ) =0.0;
+    jacobi( 14 , 7 ) =0.0;
+    jacobi( 14 , 8 ) =0.0;
+    jacobi( 14 , 9 ) =0.0;
+    jacobi( 14 , 10 ) =0.0;
+    jacobi( 14 , 11 ) =0.0;
+    jacobi( 14 , 12 ) =0.0;
+    jacobi( 14 , 13 ) =0.0;
+    jacobi( 14 , 14 ) =0.0;
+    jacobi( 14 , 15 ) =0.0;
+    jacobi( 14 , 16 ) =0.0;
+    jacobi( 14 , 17 ) =0.0;
+    jacobi( 14 , 18 ) =0.0;
+    jacobi( 14 , 19 ) =0.0;
+    jacobi( 14 , 20 ) =0.0;
+    jacobi( 14 , 21 ) =0.0;
+    jacobi( 15 , 0 ) =0.0;
+    jacobi( 15 , 1 ) =0.0;
+    jacobi( 15 , 2 ) =k38(Tg)*n[8];
+    jacobi( 15 , 3 ) =0.0;
+    jacobi( 15 , 4 ) =0.0;
+    jacobi( 15 , 5 ) =0.0;
+    jacobi( 15 , 6 ) =0.0;
+    jacobi( 15 , 7 ) =0.0;
+    jacobi( 15 , 8 ) =k38(Tg)*n[2];
+    jacobi( 15 , 9 ) =0.0;
+    jacobi( 15 , 10 ) =0.0;
+    jacobi( 15 , 11 ) =0.0;
+    jacobi( 15 , 12 ) =0.0;
+    jacobi( 15 , 13 ) =0.0;
+    jacobi( 15 , 14 ) =0.0;
+    jacobi( 15 , 15 ) =-diffusion.Da_Si2H3m*diff;
+    jacobi( 15 , 16 ) =0.0;
+    jacobi( 15 , 17 ) =0.0;
+    jacobi( 15 , 18 ) =0.0;
+    jacobi( 15 , 19 ) =0.0;
+    jacobi( 15 , 20 ) =0.0;
+    jacobi( 15 , 21 ) =0.0;
+    jacobi( 16 , 0 ) =0.0;
+    jacobi( 16 , 1 ) =0.0;
+    jacobi( 16 , 2 ) =k39(Tg)*n[5];
+    jacobi( 16 , 3 ) =0.0;
+    jacobi( 16 , 4 ) =0.0;
+    jacobi( 16 , 5 ) =k39(Tg)*n[2];
+    jacobi( 16 , 6 ) =0.0;
+    jacobi( 16 , 7 ) =0.0;
+    jacobi( 16 , 8 ) =0.0;
+    jacobi( 16 , 9 ) =0.0;
+    jacobi( 16 , 10 ) =0.0;
+    jacobi( 16 , 11 ) =0.0;
+    jacobi( 16 , 12 ) =0.0;
+    jacobi( 16 , 13 ) =0.0;
+    jacobi( 16 , 14 ) =0.0;
+    jacobi( 16 , 15 ) =0.0;
+    jacobi( 16 , 16 ) = -diffusion.Da_Si2H5m*diff;
+    jacobi( 16 , 17 ) =0.0;
+    jacobi( 16 , 18 ) =0.0;
+    jacobi( 16 , 19 ) =0.0;
+    jacobi( 16 , 20 ) =0.0;
+    jacobi( 16 , 21 ) =0.0;
+    jacobi( 17 , 0 ) =k44(Te)*n[18] -k45(Te)*n[17] ;
+    jacobi( 17 , 1 ) =0.0;
+    jacobi( 17 , 2 ) =0.0;
+    jacobi( 17 , 3 ) = +k46(Tg)*n[18] ;
+    jacobi( 17 , 4 ) =0.0;
+    jacobi( 17 , 5 ) =0.0;
+    jacobi( 17 , 6 ) =0.0;
+    jacobi( 17 , 7 ) =0.0;
+    jacobi( 17 , 8 ) =0.0;
+    jacobi( 17 , 9 ) =0.0;
+    jacobi( 17 , 10 ) = -k47(Tg)*n[17];
+    jacobi( 17 , 11 ) =0.0;
+    jacobi( 17 , 12 ) =0.0;
+    jacobi( 17 , 13 ) =0.0;
+    jacobi( 17 , 14 ) =0.0;
+    jacobi( 17 , 15 ) =0.0;
+    jacobi( 17 , 16 ) =0.0;
+    jacobi( 17 , 17 ) = -k45(Te)*n[0]  -k47(Tg)*n[10]
+	-diffusion.Da_SiHm*diff; 
+    jacobi( 17 , 18 ) =k44(Te)*n[0]  +k46(Tg)*n[3];
+    jacobi( 17 , 19 ) =0.0;
+    jacobi( 17 , 20 ) =0.0;
+    jacobi( 17 , 21 ) =0.0;
+    jacobi( 18 , 0 ) = -k44(Te)*n[18] +k45(Te)*n[17] ;
+    jacobi( 18 , 1 ) = k21(Tg)*n[8] ;
+    jacobi( 18 , 2 ) = 0.0;
+    jacobi( 18 , 3 ) = -k46(Tg)*n[18];
+    jacobi( 18 , 4 ) = 0.0;
+    jacobi( 18 , 5 ) = 0.0;
+    jacobi( 18 , 6 ) = +k30(Tg) ;
+    jacobi( 18 , 7 ) =  +k29(Tg)*n[8];
+    jacobi( 18 , 8 ) = k21(Tg)*n[1] +k29(Tg)*n[7] ;
+    jacobi( 18 , 9 ) = 0.0;
+    jacobi( 18 , 10 ) =  +k47(Tg)*n[17];
+    jacobi( 18 , 11 ) = 0.0;
+    jacobi( 18 , 12 ) = 0.0;
+    jacobi( 18 , 13 ) = 0.0;
+    jacobi( 18 , 14 ) = 0.0;
+    jacobi( 18 , 15 ) = 0.0;
+    jacobi( 18 , 16 ) = 0.0;
+    jacobi( 18 , 17 ) = +k45(Te)*n[0] +k47(Tg)*n[10];
+    jacobi( 18 , 18 ) = -k44(Te)*n[0] -k46(Tg)*n[3];
+    jacobi( 18 , 19 ) = 0.0;
+    jacobi( 18 , 20 ) = 0.0;
+    jacobi( 18 , 21 ) = 0.0;
+    jacobi( 19 , 0 ) = 0.0;
+    jacobi( 19 , 1 ) = 0.0;
+    jacobi( 19 , 2 ) = 0.0;
+    jacobi( 19 , 3 ) = 0.0;
+    jacobi( 19 , 4 ) = 0.0;
+    jacobi( 19 , 5 ) = 0.0;
+    jacobi( 19 , 6 ) = 0.0;
+    jacobi( 19 , 7 ) = 0.0;
+    jacobi( 19 , 8 ) = k26(Tg);
+    jacobi( 19 , 9 ) = 0.0;
+    jacobi( 19 , 10 ) = 0.0;
+    jacobi( 19 , 11 ) = 0.0;
+    jacobi( 19 , 12 ) = 0.0;
+    jacobi( 19 , 13 ) = 0.0;
+    jacobi( 19 , 14 ) = 0.0;
+    jacobi( 19 , 15 ) = 0.0;
+    jacobi( 19 , 16 ) = 0.0;
+    jacobi( 19 , 17 ) = 0.0;
+    jacobi( 19 , 18 ) = 0.0;
+    jacobi( 19 , 19 ) = 0.0;
+    jacobi( 19 , 20 ) = 0.0;
+    jacobi( 19 , 21 ) = 0.0;
+    jacobi( 20 , 0 ) = k1(Te)*n_Ar +k3(Te)*n[1] ;
+    jacobi( 20 , 1 ) =+k3(Te)*n[0] +k4(Te)*2.*n[1];
+    jacobi( 20 , 2 ) =-k42(Tg)*n[20];
+    jacobi( 20 , 3 ) =-k41(Tg)*n[20];
+    jacobi( 20 , 4 ) =0.0;
+    jacobi( 20 , 5 ) =0.0;
+    jacobi( 20 , 6 ) =0.0;
+    jacobi( 20 , 7 ) =0.0;
+    jacobi( 20 , 8 ) =0.0;
+    jacobi( 20 , 9 ) =0.0;
+    jacobi( 20 , 10 ) =0.0;
+    jacobi( 20 , 11 ) =0.0;
+    jacobi( 20 , 12 ) =0.0;
+    jacobi( 20 , 13 ) =0.0;
+    jacobi( 20 , 14 ) =0.0;
+    jacobi( 20 , 15 ) =0.0;
+    jacobi( 20 , 16 ) =0.0;
+    jacobi( 20 , 17 ) =0.0;
+    jacobi( 20 , 18 ) =0.0;
+    jacobi( 20 , 19 ) =0.0;
+    jacobi( 20 , 20 ) =-k41(Tg)*n[3]-k42(Tg)*n[2]-diffusion.Da_Arp*diff;
+    jacobi( 20 , 21 ) =0.0;
+    jacobi( 21 , 0 ) = 0.0 ;
+    jacobi( 21 , 1 ) =0.0;
+    jacobi( 21 , 2 ) =k58(Tg)*n[4];
+    jacobi( 21 , 3 ) =0.0;
+    jacobi( 21 , 4 ) = k58(Tg)*n[2];
+    jacobi( 21 , 5 ) =0.0;
+    jacobi( 21 , 6 ) =0.0;
+    jacobi( 21 , 7 ) =0.0;
+    jacobi( 21 , 8 ) =0.0;
+    jacobi( 21 , 9 ) =0.0;
+    jacobi( 21 , 10 ) =0.0;
+    jacobi( 21 , 11 ) =0.0;
+    jacobi( 21 , 12 ) =0.0;
+    jacobi( 21 , 13 ) =0.0;
+    jacobi( 21 , 14 ) =0.0;
+    jacobi( 21 , 15 ) =0.0;
+    jacobi( 21 , 16 ) =0.0;
+    jacobi( 21 , 17 ) =0.0;
+    jacobi( 21 , 18 ) =0.0;
+    jacobi( 21 , 19 ) =0.0;
+    jacobi( 21 , 20 ) =0.0;
+    jacobi( 21 , 21 ) =0.0;
+
+    dfdt( 0 ) = 0.0;
+    dfdt( 1 ) = 0.0;
+    dfdt( 2 ) = 0.0;
+    dfdt( 3 ) = 0.0;
+    dfdt( 4 ) = 0.0;
+    dfdt( 5 ) = 0.0;
+    dfdt( 6 ) = 0.0;
+    dfdt( 7 ) = 0.0;
+    dfdt( 8 ) = 0.0;
+    dfdt( 9 ) = 0.0;
+    dfdt( 10 ) = 0.0;
+    dfdt( 11 ) = 0.0;
+    dfdt( 12 ) = 0.0;
+    dfdt( 13 ) = 0.0;
+    dfdt( 14 ) = 0.0;
+    dfdt( 15 ) = 0.0;
+    dfdt( 16 ) = 0.0;
+    dfdt( 17 ) = 0.0;
+    dfdt( 18 ) = 0.0;
+    dfdt( 19 ) = 0.0;
+    dfdt( 20 ) = 0.0;
+    dfdt( 21 ) = 0.0;
+
+  }
+ Diffusion diffusion;
+  value_type Te;
+};
+
+struct etemperature
+{
+  value_type operator()(value_type const& Te)
+  {
+    return -DP/n[0]
+    +k1(Te)*n_Ar*16.14 +(k2(Te)-k5(Te))*n[1]*12.31+k3(Te)*n[1]*5.39
+    +k6(Te)*n[5]*10.68 +k7(Te)*n[5]*10.68 +k8(Te)*n[5]*8.29 +k9(Te)*n[5]*8.29
+    +k10(Te)*n[5]*24.1 +k11(Te)*n[6]*1.94 +k12(Te)*n[6]*1.30 +k13(Te)*n[2]*1.16
+    +k14(Te)*n[3]*1.16 -k15(Te)*n[8]*1.5*Te +k16(Te)*n[9]*10.09
+    +k17(Te)*n[9]*16.05 -k43(Te)*n[6]*1.5*Te -k44(Te)*n[18]*1.5*Te
+    +k45(Te)*n[17]*1.25
+    +(k1(Te)*n_Ar +k3(Te)*n[1] +k10(Te)*n[5] +k12(Te)*n[6] +k17(Te)*n[9])
+    *3*Te;
+  }
+
+  state_type n;
+};
+
+
+void write_density( const value_type t, const value_type Te, const state_type &n)
+{
+  cout << t  << '\t' <<Te <<'\t' << n[0] << '\t' << n[1] << '\t'
+               << n[2] << '\t' << n[3] <<'\t'<< n[4] << '\t' << n[5] << '\t'
+               << n[6] << '\t' << n[7] << '\t' << n[8] << '\t' << n[9] << '\t'
+               << n[10] << '\t' << n[11] << '\t' << n[12] << '\t'
+               << n[13] << '\t' << n[14] << '\t' << n[15] << '\t'
+               << n[16] << '\t' << n[17] << '\t'<< n[18] << '\t'
+               << n[19] << '\t' << n[20]  << '\t'<< n[21]<<endl;
+}
+
+int main(int argc, char **argv)
+{ 
+
+
+
+  cout <<"t"<<'\t'<<"Te"<<'\t'<<"e"<<'\t'<<"Armet"<<'\t'<< "SiH3m"<<'\t'
+               << "SiH2"<<'\t'<< "SiH3p"<<'\t'<< "SiH4"<<'\t'<< "SiH3"<<'\t'
+               <<"H"<<'\t'<< "SiH2"<<'\t'<< "H2"<<'\t'<< "H2p"<<'\t'<< "Si2H5"
+               <<'\t'<< "Si2H2"<<'\t'<<"Si2H4m"<<'\t'<<"Si2H6"<<'\t'<< "Si2H3m"
+               <<'\t'<< "Si2H5m"<<'\t'<< "SiHm"<<'\t'<<"SiH"<<'\t'<< "Si"<<'\t'
+               << "Arp"<<'\t'<<"Si2H4"<<endl;
+//clock_t t1,t2;
+
+  // Time variables
+  value_type t = 0.0;
+  value_type dt = 1.0e-8;
+  value_type Tmax = 1;
+  value_type NT = Tmax/dt;
+
+  // Root finding variables
+  value_type min = 0.001;
+  value_type max = 20.0;
+  boost::uintmax_t max_iter = 500;
+  eps_tolerance<value_type> tol(30);
+
+  // initial values
+  value_type Te = 3.0;
+
+  // Density vectors and initial condition
+  state_type n_ini(Nbr_espece, 0.0); // initial conditions
+  n_ini[0] = n_e_ini;
+  n_ini[1] = n_Arp_ini;  // initial conditions
+  n_ini[2] = 0.0;
+  n_ini[3] = 0.0;
+  n_ini[4] = 0.0;
+  n_ini[5] = n_SiH4_ini;
+  n_ini[6] = 0.0;
+  n_ini[7] = 0.0;
+  n_ini[8] = 0.0;
+  n_ini[9] = 0.0;
+  n_ini[10] = 0.0;
+  n_ini[11] = 0.0;
+  n_ini[12] = 0.0;
+  n_ini[13] = 0.0;
+  n_ini[14] = 0.0;
+  n_ini[15] = 0.0;
+  n_ini[16] = 0.0;
+  n_ini[17] = 0.0;
+  n_ini[18] = 0.0;
+  n_ini[19] = 0.0;
+  n_ini[20] = n_Arp_ini;
+  n_ini[21] = 0.0;
+
+
+  state_type n_new(Nbr_espece, 0.0);  // first step same as initial conditions
+  n_new = n_ini;
+  state_type n_err(Nbr_espece, 0.0); //error
+
+   // declare the functor etemperature
+  etemperature etemp;
+  // assign initial values to functor etemp
+  etemp.n = n_ini;
+
+// Find Te first calculation
+  pair<value_type, value_type> pair_Te =\
+                toms748_solve(etemp, min, max, tol, max_iter);
+
+  Te = pair_Te.first;
+  cerr << "\n[ii] Initial Temperature  = " << Te << endl;
+
+  // declare system and jacobian
+  nsystem sys;
+  jacobian jac;
+
+  // declare stepper Rosenbrock
+  stepper_type stepper;
+
+  for (int i = 1; i <= NT+1; i++)
+  {
+    // update Te in system and jacobian
+    sys.Te = Te;
+    jac.Te = Te;
+
+    // Integrate at least one step dt
+    stepper.do_step( std::make_pair( sys, jac ), n_new, t, dt, n_err);
+
+    // assign values to functor etemp
+    etemp.n = n_new;
+    if (i%((int)(NT/50))==0)
+    {
+      write_density(t, Te, n_new);
+    }
+    
+    // Find new Te
+    pair<value_type, value_type> pair_Te =\
+                  toms748_solve(etemp, min, max, tol, max_iter);
+
+    Te = pair_Te.first;
+    t+= dt;
+    n_ini = n_new;//update
+  }
+
+  value_type charge= (n_new[20]+n_new[4]+n_new[10]-n_new[0]-n_new[2]-n_new[3]-n_new[13]-n_new[15]-n_new[16]-n_new[17])/n_Arp_ini;
+
+  cerr<<"charge/dArp="<<charge<<endl;
+
+  value_type Si=(n_new[2]+n_new[3]+n_new[4]+n_new[13]*2+2*n_new[15]+n_new[16]*2
+          +n_new[17]+n_new[5]+n_new[6]+n_new[8]+n_new[18]+2*n_new[11]+n_new[19]
+          +n_new[12]*2+n_new[14]*2+2*n_new[21])/n_SiH4_ini;
+
+  cerr<<"Si="<<Si<<endl;
+
+
+  value_type H=(3*n_new[2]+2*n_new[3]+3*n_new[4]+4*n_new[5]+3*n_new[6]+n_new[7]
+	+2*n_new[8]+2*n_new[9]+2*n_new[10]+5* n_new[11]+2*n_new[12]
+	+4*n_new[13]+6*n_new[14]+3*n_new[15]+5*n_new[16]+n_new[17]
+         +n_new[18 ]+4*n_new[21])/(4*n_SiH4_ini);
+
+  cerr<<"H="<<H<<endl;
+
+
+  return 0;
+
+}
+
