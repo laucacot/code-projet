@@ -34,14 +34,14 @@ const value_type K = 8.6173303e-5; //constqnte de boltzman en eV/k
 const value_type D_Amet=0.005; //diffusion des Ar* en m2/s
 const value_type pi = M_PI;
 const value_type diff = pow((pi/L), 2);
+const value_type DP = 1.58e23;//puissance totale du systeme
 const value_type n_Ar =  (0.1/760)*2.69e25;
 const value_type n_SiH4_ini = n_Ar/100.;
 const value_type n_Arp_ini = 1.e16;
-const value_type n_e_ini = 1.e14;
-const int Nbr_espece=22;
-const value_type DP = 1.58e23;//puissance totale du systeme
+const int Nbr_espece=23;
 
 const float C=1.35e21;
+
 
 //calcul des diffusions
 
@@ -220,7 +220,7 @@ value_type k14 (value_type Te) //K14 SiH2- + e -> SiH2  + 2e
 value_type k15 (value_type Te) //K15 SiH2 + e -> SiH2-
 {
     value_type K15;
-    K15=5.71E-16*pow((Te),-0.5);
+    K15=5.71E-16*pow((Te),-0.5)*exp(-(0)/(Te));
     return K15;
 
 }
@@ -294,7 +294,7 @@ value_type k24 (value_type Tg) //K24 SiH4 + SIH3 -> Si2H5 + H2
 value_type k25 (value_type Tg) //K25 SiH2 + H2 -> SiH4
 {
     value_type K25;
-    K25=2.e-19 ;
+    K25=1.e-20 ;
     return K25;
 }
 
@@ -364,7 +364,7 @@ value_type k34 (value_type Tg) //K34 SiH3- +H2+ -> SiH3 + H2
 value_type k35 (value_type Tg) //K35 SiH3- + SiH3+ -> Si2H6
 {
     value_type K35;
-    K35= 2.11e-20*0.5 ;
+    K35= 0.5*2.11e-20 ;
     return K35;
 }
 
@@ -455,11 +455,80 @@ value_type k47 (value_type Tg) //K47 SiH- + H2p ->  SiH + H2
     return K47;
 }
 
+value_type k48 (value_type Tg) //K48 Si2H4B- + SiH4 ->  NP + H2
+{
+    value_type K48;
+    K48= 4.83e-17;
+    return K48;
+}
+
+value_type k49 (value_type Tg) //K49 Si2H4B- + Si2H6 ->  NP + H2
+{
+    value_type K49;
+    K49= 8.95e-17;
+    return K49;
+}
+
+value_type k50 (value_type Tg) //K50 Si2H4B- + SiH2 ->  NP + H2
+{
+    value_type K50;
+    K50= 4.95e-17;
+    return K50;
+}
+
+value_type k51 (value_type Tg) //K51 Si2H5- + Si2H4B ->  NP + H2
+{
+    value_type K51;
+    K51= 9.02e-17;
+    return K51;
+}
+
+value_type k52 (value_type Tg) //K52 Si2H5- + SiH4 ->  NP + H2
+{
+    value_type K52;
+    K52= 4.83e-17;
+    return K52;
+}
+
+value_type k53 (value_type Tg) //K53 Si2H5- + Si2H6 ->  NP + H2
+{
+    value_type K53;
+    K53= 8.92e-17;
+    return K53;
+}
+
+value_type k54 (value_type Tg) //K54 Si2H5- + SiH2 ->  NP + H2
+{
+    value_type K54;
+    K54= 4.93e-17;
+    return K54;
+}
+
+value_type k55 (value_type Tg) //K55 Si2H5- + SiH3 ->  NP + H2
+{
+    value_type K55;
+    K55= 4.88e-17;
+    return K55;
+}
+
+value_type k56 (value_type Tg) //K56 Si2H5 + Si2H3- ->  NP + H2
+{
+    value_type K56;
+    K56= 9.02e-17;
+    return K56;
+}
+
+value_type k57 (value_type Tg) //K57 Si2H5- + Si2H5 ->  NP + H2
+{
+    value_type K57;
+    K57= 8.95e-17;
+    return K57;
+}
 
 value_type k58 (value_type Tg) //K58 SiH3- + SiH3+ ->  Si2H4 + H2
 {
     value_type K58;
-    K58=  4.87E-13*0.5*pow((Tg),-0.5);
+    K58=  0.5*4.87E-13*pow((Tg),-0.5);
     return K58;
 }
 
@@ -470,6 +539,7 @@ struct Condition
     return abs(min - max) <= tol;
   }
 };
+
 //!  Diffusion class
 /*!
   The constructor calls init, which initializes the free diffusion
@@ -521,10 +591,6 @@ public:
   */
   void update(const state_type &n)
   {
-    // updat Da
-    /*0=e, 1=Armet, 2=SiH3-, 3=SiH2-, 4=SiH3+, 5=SiH4, 6=SiH3,
- 7=H, 8=SiH2, 9=H2, 10=H2+, 11=Si2H5, 12=Si2H2, 13=Si2H4-,
- 14=Si2H6, 15=Si2H3-, 16=Si2H5-, 17=SiH-, 18=SiH, 19=Si, 20=Arp, 21=Si2H4 */
 
     Da_e=(DL_e*(mu_Arp*n[20] + mu_SiH3m*n[2] + mu_SiH2m*n[3]
         + mu_SiH3p*n[4] + mu_H2p*n[10] + mu_Si2H4m*n[13]
@@ -667,6 +733,7 @@ public:
 
 };
 
+
 struct nsystem
 {
   void operator()(const state_type &n, state_type &dndt, const value_type &t)
@@ -677,7 +744,7 @@ struct nsystem
 
     /*0=e, 1=Armet, 2=SiH3-, 3=SiH2-, 4=SiH3+, 5=SiH4, 6=SiH3,
     7=H, 8=SiH2, 9=H2, 10=H2+, 11=Si2H5, 12=Si2H2, 13=Si2H4-,
-    14=Si2H6, 15=Si2H3-, 16=Si2H5-, 17=SiH-, 18=SiH, 19=Si, 20=Arp, 21=Si2H4*/
+    14=Si2H6, 15=Si2H3-, 16=Si2H5-, 17=SiH-, 18=SiH, 19=Si, 20=Arp, 21=NP, 22=Si2H4*/
 
     dndt[0]=k1(Te)*n_Ar*n[0] +k3(Te)*n[1]*n[0] +k4(Te)*pow(n[1],2) -k8(Te)*n[5]*n[0]
         -k9(Te)*n[5]*n[0] +k10(Te)*n[5]*n[0] -k11(Te)*n[6]*n[0] +k12(Te)*n[0]*n[6]
@@ -697,18 +764,18 @@ struct nsystem
         -k41(Tg)*n[3]*n[20] - k46(Tg)*n[3]*n[18]-diffusion.Da_SiH2m*n[3]*diff;
 
     dndt[4]=k10(Te)*n[5]*n[0] +k12(Te)*n[0]*n[6] -k35(Tg)*n[2]*n[4] -k40(Tg)*n[3]*n[4]
-	-k58(Tg)*n[2]*n[4] -diffusion.Da_SiH3p*n[4]*diff;
+	-k58(Tg)*n[2]*n[4]-diffusion.Da_SiH3p*n[4]*diff ;
 
-    dndt[5]= C-k6(Te)*n[5]*n[0] -k7(Te)*n[0]*n[5] -k8(Te)*n[5]*n[0] -k9(Te)*n[5]*n[0]
+    dndt[5]=C-k6(Te)*n[5]*n[0] -k7(Te)*n[0]*n[5] -k8(Te)*n[5]*n[0] -k9(Te)*n[5]*n[0]
         -k10(Te)*n[5]*n[0] -k18(Tg)*n[5]*n[1] -k19(Tg)*n[1]*n[5] +k23(Tg)*pow(n[6],2)
         -k24(Tg)*n[5]*n[6] +k25(Tg)*n[8]*n[9] -k27(Tg)*n[5]*n[7] -k36(Tg)*n[3]*n[5]
-        -k39(Tg)*n[2]*n[5] ;
+        -k39(Tg)*n[2]*n[5] -k48(Tg)*n[13]*n[5] -k52(Tg)*n[16]*n[5];
 
     dndt[6]= k6(Te)*n[5]*n[0] -k11(Te)*n[6]*n[0] -k12(Te)*n[0]*n[6] +k13(Te)*n[2]*n[0]
         +k18(Tg)*n[5]*n[1] -k20(Tg)*n[6]*n[1] -2*k23(Tg)*pow(n[6],2) -k24(Tg)*n[5]*n[6]
         +k27(Tg)*n[5]*n[7] -k30(Tg)*n[6] -k31(Tg)*n[6]*n[7] +k33(Tg)*n[2]*n[10]
 	-k34(Tg)*n[2]*n[6]
-        -k37(Tg)*n[3]*n[6] +k42(Tg)*n[2]*n[20]-k43(Te)*n[6]*n[0] ;
+        -k37(Tg)*n[3]*n[6] +k42(Tg)*n[2]*n[20]-k43(Te)*n[6]*n[0] -k55(Tg)*n[16]*n[6];
 
     dndt[7]=  k6(Te)*n[5]*n[0] +2*k7(Te)*n[0]*n[5] +k8(Te)*n[5]*n[0] +2*k9(Te)*n[5]*n[0]
         +k10(Te)*n[5]*n[0] +k11(Te)*n[6]*n[0] +2*k16(Te)*n[9]*n[0] +k18(Tg)*n[5]*n[1]
@@ -719,29 +786,36 @@ struct nsystem
         +k20(Tg)*n[6]*n[1] -k21(Tg)*n[8]*n[1] +k23(Tg)*pow(n[6],2) -k25(Tg)*n[8]*n[9]
         -k26(Tg)*n[8] -2*k28(Tg)*pow(n[8],2) -k29(Tg)*n[8]*n[7] +k31(Tg)*n[6]*n[7]
 	+k32(Tg)*n[3]*n[10]
-        +k37(Tg)*n[3]*n[6] -k38(Tg)*n[2]*n[8] +k41(Tg)*n[3]*n[20] +k46(Tg)*n[3]*n[18];
+        +k37(Tg)*n[3]*n[6] -k38(Tg)*n[2]*n[8] +k41(Tg)*n[3]*n[20] +k46(Tg)*n[3]*n[18]
+	-k50(Tg)*n[13]*n[8] -k54(Tg)*n[16]*n[8];
 
     dndt[9]=-k16(Te)*n[9]*n[0] -k17(Te)*n[9]*n[0] -k22(Tg)*n[9]*n[1] +k24(Tg)*n[5]*n[6]
         -k25(Tg)*n[8]*n[9] +k26(Tg)*n[8] +k27(Tg)*n[5]*n[7] +k28(Tg)*pow(n[8],2) +k29(Tg)
 	*n[8]*n[7]+k30(Tg)*n[6] +k31(Tg)*n[6]*n[7] +k32(Tg)*n[3]*n[10] +k33(Tg)*n[2]*n[10]
 	+k34(Tg)*n[2]*n[6]+ k36(Tg)*n[3]*n[5] +k38(Tg)*n[2]*n[8] +k39(Tg)*n[2]*n[5]
 	+k47(Tg)*n[17]*n[10]
+	+k48(Tg)*n[13]*n[5] +k49(Tg)*n[13]*n[14] +k50(Tg)*n[13]*n[8] +k51(Tg)*n[16]*n[22]
+	+k52(Tg)*n[16]*n[5] +k53(Tg)*n[16]*n[14]
+	+k54(Tg)*n[16]*n[8] +k55(Tg)*n[16]*n[6] +k56(Tg)*n[11]*n[15]+k57(Tg)*n[16]*n[11]
 	+k58(Tg)*n[2]*n[4];
 
     dndt[10]= k17(Te)*n[9]*n[0] -k32(Tg)*n[3]*n[10] -k33(Tg)*n[2]*n[10] -k47(Tg)*n[17]*n[10]
 	-diffusion.Da_H2p*diff*n[10];
 
-    dndt[11]= k24(Tg)*n[5]*n[6] +k40(Tg)*n[3]*n[4];
+    dndt[11]= k24(Tg)*n[5]*n[6] +k40(Tg)*n[3]*n[4] -k56(Tg)*n[11]*n[15] -k57(Tg)*n[16]*n[11];
 
     dndt[12]=k28(Tg)*pow(n[8],2);
 
-    dndt[13]= k34(Tg)*n[2]*n[6] +k36(Tg)*n[3]*n[5]-diffusion.Da_Si2H4m*diff*n[13] ;
+    dndt[13]= k34(Tg)*n[2]*n[6] +k36(Tg)*n[3]*n[5] -k48(Tg)*n[13]*n[5] -k49(Tg)*n[13]*n[14]
+	-k50(Tg)*n[13]*n[8]-diffusion.Da_Si2H4m*diff*n[13] ;
 
-    dndt[14]= k35(Tg)*n[2]*n[4] ;
+    dndt[14]= k35(Tg)*n[2]*n[4] -k49(Tg)*n[13]*n[14] -k53(Tg)*n[16]*n[14];
 
-    dndt[15]= k38(Tg)*n[2]*n[8]-diffusion.Da_Si2H3m*diff*n[15];
+    dndt[15]= k38(Tg)*n[2]*n[8]-k56(Tg)*n[11]*n[15]-diffusion.Da_Si2H3m*diff*n[15];
 
-    dndt[16]= k39(Tg)*n[2]*n[5] -diffusion.Da_Si2H5m*diff*n[16];
+    dndt[16]= k39(Tg)*n[2]*n[5] -k51(Tg)*n[16]*n[22]-k52(Tg)*n[16]*n[5] -k53(Tg)*n[16]*n[14]
+	-k54(Tg)*n[16]*n[8] -k55(Tg)*n[16]*n[6] -k57(Tg)*n[16]*n[11]
+	-diffusion.Da_Si2H5m*diff*n[16];
 
     dndt[17]= k44(Te)*n[18]*n[0] -k45(Te)*n[0]*n[17] +k46(Tg)*n[3]*n[18] -k47(Tg)*n[17]*n[10]
 	-diffusion.Da_SiHm*n[17]*diff;
@@ -754,11 +828,14 @@ struct nsystem
     dndt[20]=k1(Te)*n_Ar*n[0] +k3(Te)*n[1]*n[0] +k4(Te)*pow(n[1],2)
         -k41(Tg)*n[3]*n[20]-k42(Tg)*n[2]*n[20]-diffusion.Da_Arp*n[20]*diff;
 
-    dndt[21]=+k58(Tg)*n[2]*n[4];
+    dndt[21]=+k48(Tg)*n[13]*n[5] +k49(Tg)*n[13]*n[14] +k50(Tg)*n[13]*n[8]
+	 +k51(Tg)*n[16]*n[22]+k52(Tg)*n[16]*n[5] +k53(Tg)*n[16]*n[14]
+	+k54(Tg)*n[16]*n[8] +k55(Tg)*n[16]*n[6] +k56(Tg)*n[11]*n[15]+k57(Tg)*n[16]*n[11]  ;
+
+    dndt[22]=-k51(Tg)*n[16]*n[22]+k58(Tg)*n[2]*n[4];
   }
 
   value_type Te;
-
   Diffusion diffusion;
 };
 
@@ -766,12 +843,13 @@ struct jacobian
 {
   void operator()(const state_type &n, matrix_type &jacobi,
                   const value_type &t, state_type &dfdt ) const
-  {
-    jacobi( 0 , 0 )=k1(Te)*n_Ar +k3(Te)*n[1]  -k8(Te)*n[5]
+  { 
+
+    jacobi( 0 , 0 )=k1(Te)*n_Ar +k3(Te)*n[1] -k8(Te)*n[5]
         -k9(Te)*n[5] +k10(Te)*n[5] -k11(Te)*n[6] +k12(Te)*n[6]
-        +k13(Te)*n[2] +k14(Te)*n[3] -k15(Te)*n[8] +k17(Te)*n[9]
-        -k43(Te)*n[6]-k44(Te)*n[18] +k45(Te)*n[17]- diffusion.Da_e*diff;
-    jacobi( 0 , 1 )=  +k3(Te)*n[0] +k4(Te)*n[1] ;
+        +k13(Te)*n[2]+k14(Te)*n[3] -k15(Te)*n[8] +k17(Te)*n[9]
+        -k43(Te)*n[6]-k44(Te)*n[18]+k45(Te)*n[17]- diffusion.Da_e*diff;
+    jacobi( 0 , 1 )= +k3(Te)*n[0] +2.*k4(Te)*n[1] ;
     jacobi( 0 , 2 )= +k13(Te)*n[0] ;
     jacobi( 0 , 3 )= +k14(Te)*n[0] ;
     jacobi( 0 , 4 )= 0.0;
@@ -792,6 +870,7 @@ struct jacobian
     jacobi( 0 , 19 )=0.0;
     jacobi( 0 , 20 )=0.0;
     jacobi( 0 , 21 )=0.0;
+    jacobi( 0 , 22 )=0.0;
     jacobi( 1 , 0 ) = k2(Te)*n_Ar -k3(Te)*n[1]  -k5(Te)*n[1];
     jacobi( 1 , 1 ) =  -k3(Te)*n[0] -2*k4(Te)*n[1] -k5(Te)*n[0]
         -k18(Tg)*n[5] -k19(Tg)*n[5] -k20(Tg)*n[6] -k21(Tg)*n[8]
@@ -816,10 +895,11 @@ struct jacobian
     jacobi( 1 , 19 ) =0.0;
     jacobi( 1 , 20 ) = 0.0;
     jacobi( 1 , 21 ) = 0.0;
+    jacobi( 1 , 22 ) = 0.0;
     jacobi( 2 , 0 ) = k8(Te)*n[5] -k13(Te)*n[2]  + k43(Te)*n[6];
     jacobi( 2 , 1 ) = 0.0;
-    jacobi( 2 , 2 ) =  -k13(Te)*n[0] -k33(Tg)*n[10] -k34(Tg)*n[6]
-        -k35(Tg)*n[4]  -k38(Tg)*n[8] -k39(Tg)*n[5]
+    jacobi( 2 , 2 ) = -k13(Te)*n[0] -k33(Tg)*n[10] -k34(Tg)*n[6]
+        -k35(Tg)*n[4] -k38(Tg)*n[8] -k39(Tg)*n[5]
         -k42(Tg)*n[20]  -k58(Tg)*n[4]-diffusion.Da_SiH3m*diff;
     jacobi( 2 , 3 ) = + k37(Tg)*n[6] ;
     jacobi( 2 , 4 ) = -k35(Tg)*n[2] -k58(Tg)*n[2];
@@ -840,12 +920,13 @@ struct jacobian
     jacobi( 2 , 19 ) = 0.0;
     jacobi( 2 , 20 ) = -k42(Tg)*n[2];
     jacobi( 2 , 21 ) = 0.0;
+    jacobi( 2 , 22 ) = 0.0;
     jacobi( 3 , 0 ) = k9(Te)*n[5] +k11(Te)*n[6] -k14(Te)*n[3] +k15(Te)*n[8];
     jacobi( 3 , 1 ) = 0.0;
     jacobi( 3 , 2 ) = 0.0;
-    jacobi( 3 , 3 ) =   -k14(Te)*n[0] 
+    jacobi( 3 , 3 ) =  -k14(Te)*n[0]
         -k32(Tg)*n[10] -k36(Tg)*n[5] -k37(Tg)*n[6] -k40(Tg)*n[4]
-        -k41(Tg)*n[20] - k46(Tg)*n[18]-diffusion.Da_SiH2m*diff;
+        -k41(Tg)*n[20] - k46(Tg)*n[18]-diffusion.Da_SiH2m*diff; 
     jacobi( 3 , 4 ) =  -k40(Tg)*n[3];
     jacobi( 3 , 5 ) = k9(Te)*n[0]  -k36(Tg)*n[3];
     jacobi( 3 , 6 ) = +k11(Te)*n[0]  -k37(Tg)*n[3] ;
@@ -864,12 +945,13 @@ struct jacobian
     jacobi( 3 , 19 ) = 0.0;
     jacobi( 3 , 20 ) =-k41(Tg)*n[3];
     jacobi( 3 , 21 ) =0.0;
+    jacobi( 3 , 22 ) =0.0;
     jacobi( 4 , 0 ) =k10(Te)*n[5] +k12(Te)*n[6] ;
     jacobi( 4 , 1 ) =0.0;
     jacobi( 4 , 2 ) = -k35(Tg)*n[4] -k58(Tg)*n[4];
     jacobi( 4 , 3 ) = -k40(Tg)*n[4];
     jacobi( 4 , 4 ) =  -k35(Tg)*n[2] -k40(Tg)*n[3]
-	-k58(Tg)*n[2] -diffusion.Da_SiH3p*diff;
+	-k58(Tg)*n[2]-diffusion.Da_SiH3p*diff ;
     jacobi( 4 , 5 ) =k10(Te)*n[0] ;
     jacobi( 4 , 6 ) =+k12(Te)*n[0];
     jacobi( 4 , 7 ) =0.0;
@@ -887,13 +969,15 @@ struct jacobian
     jacobi( 4 , 19 ) =0.0;
     jacobi( 4 , 20 ) =0.0;
     jacobi( 4 , 21 ) =0.0;
+    jacobi( 4 , 22 ) =0.0;
     jacobi( 5 , 0 ) =-k6(Te)*n[5] -k7(Te)*n[5] -k8(Te)*n[5] -k9(Te)*n[5]-k10(Te)*n[5] ;
     jacobi( 5 , 1 ) =-k18(Tg)*n[5] -k19(Tg)*n[5];
     jacobi( 5 , 2 ) =-k39(Tg)*n[5];
     jacobi( 5 , 3 ) = -k36(Tg)*n[5];
     jacobi( 5 , 4 ) =0.0;
     jacobi( 5 , 5 ) =-k6(Te)*n[0] -k7(Te)*n[0] -k8(Te)*n[0] -k9(Te)*n[0]-k10(Te)*n[0]
-    	-k18(Tg)*n[1] -k19(Tg)*n[1] -k24(Tg)*n[6] -k27(Tg)*n[7] -k36(Tg)*n[3]-k39(Tg)*n[2];
+    	-k18(Tg)*n[1] -k19(Tg)*n[1] -k24(Tg)*n[6] -k27(Tg)*n[7] -k36(Tg)*n[3]-k39(Tg)*n[2]
+	-k48(Tg)*n[13] -k52(Tg)*n[16];
     jacobi( 5 , 6 ) = +2.*k23(Tg)*n[6]-k24(Tg)*n[5] ;
     jacobi( 5 , 7 ) = -k27(Tg)*n[5];
     jacobi( 5 , 8 ) = +k25(Tg)*n[9] ;
@@ -901,15 +985,16 @@ struct jacobian
     jacobi( 5 , 10 ) =0.0;
     jacobi( 5 , 11 ) =0.0;
     jacobi( 5 , 12 ) =0.0;
-    jacobi( 5 , 13 ) =0.0;
+    jacobi( 5 , 13 ) =-k48(Tg)*n[5];
     jacobi( 5 , 14 ) =0.0;
     jacobi( 5 , 15 ) =0.0;
-    jacobi( 5 , 16 ) =0.0;
+    jacobi( 5 , 16 ) =-k52(Tg)*n[5];
     jacobi( 5 , 17 ) =0.0;
     jacobi( 5 , 18 ) =0.0;
     jacobi( 5 , 19 ) =0.0;
     jacobi( 5 , 20 ) =0.0;
     jacobi( 5 , 21 ) =0.0;
+    jacobi( 5 , 22 ) =0.0;
     jacobi( 6 , 0 ) =k6(Te)*n[5] -k11(Te)*n[6]-k12(Te)*n[6] +k13(Te)*n[2]-k43(Te)*n[6];
     jacobi( 6 , 1 ) =+k18(Tg)*n[5] -k20(Tg)*n[6] ;
     jacobi( 6 , 2 ) =+k13(Te)*n[0]+k33(Tg)*n[10] -k34(Tg)*n[6] +k42(Tg)*n[20];
@@ -917,7 +1002,7 @@ struct jacobian
     jacobi( 6 , 4 ) =0.0;
     jacobi( 6 , 5 ) =k6(Te)*n[0] +k18(Tg)*n[1] -k24(Tg)*n[6]+k27(Tg)*n[7] ;
     jacobi( 6 , 6 ) = -k11(Te)*n[0] -k12(Te)*n[0]-k20(Tg)*n[1] -2*2.*k23(Tg)*n[6]-k24(Tg)*n[5]
-    	-k30(Tg) -k31(Tg)*n[7]  -k34(Tg)*n[2]-k37(Tg)*n[3] -k43(Te)*n[0];
+    	-k30(Tg) -k31(Tg)*n[7]  -k34(Tg)*n[2]-k37(Tg)*n[3] -k43(Te)*n[0] -k55(Tg)*n[16];
     jacobi( 6 , 7 ) =+k27(Tg)*n[5] -k31(Tg)*n[6] ;
     jacobi( 6 , 8 ) =0.0;
     jacobi( 6 , 9 ) =0.0;
@@ -927,12 +1012,13 @@ struct jacobian
     jacobi( 6 , 13 ) =0.0;
     jacobi( 6 , 14 ) =0.0;
     jacobi( 6 , 15 ) =0.0;
-    jacobi( 6 , 16 ) =0.0;
+    jacobi( 6 , 16 ) =-k55(Tg)*n[6];
     jacobi( 6 , 17 ) =0.0;
     jacobi( 6 , 18 ) =0.0;
     jacobi( 6 , 19 ) =0.0;
     jacobi( 6 , 20 ) =+k42(Tg)*n[2];
     jacobi( 6 , 21 ) =0.0;
+    jacobi( 6 , 22 ) =0.0;
     jacobi( 7 , 0 ) = k6(Te)*n[5]* +2*k7(Te)*n[5] +k8(Te)*n[5]*+2*k9(Te)*n[5]
     	+k10(Te)*n[5] +k11(Te)*n[6] +2*k16(Te)*n[9] ;
     jacobi( 7 , 1 ) = +k18(Tg)*n[5]+2*k19(Tg)*n[5] +k20(Tg)*n[6] +k21(Tg)*n[8] +2*k22(Tg)*n[9];
@@ -957,6 +1043,7 @@ struct jacobian
     jacobi( 7 , 19 ) = 0.0;
     jacobi( 7 , 20 ) = 0.0;
     jacobi( 7 , 21 ) = 0.0;
+    jacobi( 7 , 22 ) = 0.0;
     jacobi( 8 , 0 ) = k7(Te)*n[5] +k14(Te)*n[3] -k15(Te)*n[8] ;
     jacobi( 8 , 1 ) =  +k19(Tg)*n[5]+k20(Tg)*n[6] -k21(Tg)*n[8] ;
     jacobi( 8 , 2 ) = -k38(Tg)*n[8] ;
@@ -966,43 +1053,47 @@ struct jacobian
     jacobi( 8 , 6 ) = +k20(Tg)*n[1]  +k23(Tg)*2.*n[6]+k31(Tg)*n[7] +k37(Tg)*n[3] ;
     jacobi( 8 , 7 ) =  -k29(Tg)*n[8]+k31(Tg)*n[6] ;
     jacobi( 8 , 8 ) =-k15(Te)*n[0]  -k21(Tg)*n[1]  -k25(Tg)*n[9]-k26(Tg)-2*k28(Tg)*2.*n[8]
-    	-k29(Tg)*n[7]-k38(Tg)*n[2] ;
+    	-k29(Tg)*n[7]-k38(Tg)*n[2] -k50(Tg)*n[13] -k54(Tg)*n[16] ;
     jacobi( 8 , 9 ) =  -k25(Tg)*n[8];
     jacobi( 8 , 10 ) = +k32(Tg)*n[3];
     jacobi( 8 , 11 ) =0.0;
     jacobi( 8 , 12 ) =0.0;
-    jacobi( 8 , 13 ) =0.0;
+    jacobi( 8 , 13 ) =-k50(Tg)*n[8];
     jacobi( 8 , 14 ) =0.0;
     jacobi( 8 , 15 ) =0.0;
-    jacobi( 8 , 16 ) =0.0;
+    jacobi( 8 , 16 ) =-k54(Tg)*n[8];
     jacobi( 8 , 17 ) =0.0;
     jacobi( 8 , 18 ) =  +k46(Tg)*n[3];
     jacobi( 8 , 19 ) =0.0;
     jacobi( 8 , 20 ) = +k41(Tg)*n[3];
     jacobi( 8 , 21 ) = 0.0;
+    jacobi( 8 , 22 ) = 0.0;
     jacobi( 9 , 0 ) =-k16(Te)*n[9] -k17(Te)*n[9];
     jacobi( 9 , 1 ) = -k22(Tg)*n[9];
     jacobi( 9 , 2 ) =+k33(Tg)*n[10] +k34(Tg)*n[6] +k38(Tg)*n[8] +k39(Tg)*n[5] 
 	+k58(Tg)*n[4];
     jacobi( 9 , 3 ) = +k32(Tg)*n[10] + k36(Tg)*n[5];
     jacobi( 9 , 4 ) =+k58(Tg)*n[2];
-    jacobi( 9 , 5 ) = +k24(Tg)*n[6]+k27(Tg)*n[7] + k36(Tg)*n[3] +k39(Tg)*n[2];
-    jacobi( 9 , 6 ) =+k24(Tg)*n[5]+k30(Tg)+k31(Tg)*n[7] +k34(Tg)*n[2] ;
+    jacobi( 9 , 5 ) = +k24(Tg)*n[6]+k27(Tg)*n[7] + k36(Tg)*n[3] +k39(Tg)*n[2]+k48(Tg)*n[13] 
+	+k52(Tg)*n[16];
+    jacobi( 9 , 6 ) =+k24(Tg)*n[5]+k30(Tg)+k31(Tg)*n[7] +k34(Tg)*n[2] +k55(Tg)*n[16];
     jacobi( 9 , 7 ) =+k27(Tg)*n[5]+k29(Tg)*n[8]+k31(Tg)*n[6];
-    jacobi( 9 , 8 ) =-k25(Tg)*n[9] +k26(Tg)+k28(Tg)*2.*n[8]+k29(Tg)*n[7]+k38(Tg)*n[2];
+    jacobi( 9 , 8 ) =-k25(Tg)*n[9] +k26(Tg)+k28(Tg)*2.*n[8]+k29(Tg)*n[7]+k38(Tg)*n[2] 
+	+k50(Tg)*n[13] +k54(Tg)*n[16];
     jacobi( 9 , 9 ) =-k16(Te)*n[0] -k17(Te)*n[0] -k22(Tg)*n[1] -k25(Tg)*n[8];
     jacobi( 9 , 10 ) = +k32(Tg)*n[3] +k33(Tg)*n[2] +k47(Tg)*n[17];
-    jacobi( 9 , 11 ) =0.0;
+    jacobi( 9 , 11 ) =+k56(Tg)*n[15]+k57(Tg)*n[16];
     jacobi( 9 , 12 ) =0.0;
-    jacobi( 9 , 13 ) =0.0;
-    jacobi( 9 , 14 ) =0.0;
-    jacobi( 9 , 15 ) =0.0;
-    jacobi( 9 , 16 ) =0.0;
+    jacobi( 9 , 13 ) =+k48(Tg)*n[5] +k49(Tg)*n[14] +k50(Tg)*n[8];
+    jacobi( 9 , 14 ) =+k49(Tg)*n[13] +k53(Tg)*n[16];
+    jacobi( 9 , 15 ) =k56(Tg)*n[11];
+    jacobi( 9 , 16 ) =+k51(Tg)*n[22]+k52(Tg)*n[5] +k53(Tg)*n[14]+k54(Tg)*n[8] +k55(Tg)*n[6] +k57(Tg)*n[11];
     jacobi( 9 , 17 ) = +k47(Tg)*n[10];
     jacobi( 9 , 18 ) =0.0;
     jacobi( 9 , 19 ) =0.0;
     jacobi( 9 , 20 ) =0.0;
     jacobi( 9 , 21 ) =0.0;
+    jacobi( 9 , 22 ) =+k51(Tg)*n[16];
     jacobi( 10 , 0 ) =k17(Te)*n[9] ;
     jacobi( 10 , 1 ) =0.0;
     jacobi( 10 , 2 ) =-k33(Tg)*n[10] ;
@@ -1013,7 +1104,7 @@ struct jacobian
     jacobi( 10 , 7 ) =0.0;
     jacobi( 10 , 8 ) =0.0;
     jacobi( 10 , 9 ) =k17(Te)*n[0] ;
-    jacobi( 10 , 10 ) = -k32(Tg)*n[3] -k33(Tg)*n[2] -k47(Tg)*n[17]
+    jacobi( 10 , 10 ) = -k32(Tg)*n[3]-k33(Tg)*n[2] -k47(Tg)*n[17]
 	-diffusion.Da_H2p*diff;
     jacobi( 10 , 11 ) =0.0;
     jacobi( 10 , 12 ) =0.0;
@@ -1026,6 +1117,7 @@ struct jacobian
     jacobi( 10 , 19 ) =0.0;
     jacobi( 10 , 20 ) =0.0;
     jacobi( 10 , 21 ) =0.0;
+    jacobi( 10 , 22 ) =0.0;
     jacobi( 11 , 0 ) =0.0;
     jacobi( 11 , 1 ) =0.0;
     jacobi( 11 , 2 ) =0.0;
@@ -1037,17 +1129,18 @@ struct jacobian
     jacobi( 11 , 8 ) =0.0;
     jacobi( 11 , 9 ) =0.0;
     jacobi( 11 , 10 ) =0.0;
-    jacobi( 11 , 11 ) =0.0;
+    jacobi( 11 , 11 ) =-k56(Tg)*n[15]-k57(Tg)*n[16];
     jacobi( 11 , 12 ) =0.0;
     jacobi( 11 , 13 ) =0.0;
     jacobi( 11 , 14 ) =0.0;
-    jacobi( 11 , 15 ) =0.0;
-    jacobi( 11 , 16 ) =0.0;
+    jacobi( 11 , 15 ) =-k56(Tg)*n[11];
+    jacobi( 11 , 16 ) =-k57(Tg)*n[11];
     jacobi( 11 , 17 ) =0.0;
     jacobi( 11 , 18 ) =0.0;
     jacobi( 11 , 19 ) =0.0;
     jacobi( 11 , 20 ) =0.0;
     jacobi( 11 , 21 ) =0.0;
+    jacobi( 11 , 22 ) =0.0;
     jacobi( 12 , 0 ) =0.0;
     jacobi( 12 , 1 ) =0.0;
     jacobi( 12 , 2 ) =0.0;
@@ -1070,21 +1163,22 @@ struct jacobian
     jacobi( 12 , 19 ) =0.0;
     jacobi( 12 , 20 ) =0.0;
     jacobi( 12 , 21 ) =0.0;
+    jacobi( 12 , 22 ) =0.0;
     jacobi( 13 , 0 ) =0.0;
-    jacobi( 13 , 1 ) =0.0;
     jacobi( 13 , 2 ) =k34(Tg)*n[6];
     jacobi( 13 , 3 ) = +k36(Tg)*n[5];
     jacobi( 13 , 4 ) =0.0;
-    jacobi( 13 , 5 ) = +k36(Tg)*n[3] ;
+    jacobi( 13 , 5 ) = +k36(Tg)*n[3] -k48(Tg)*n[13];
     jacobi( 13 , 6 ) =k34(Tg)*n[2];
     jacobi( 13 , 7 ) =0.0;
-    jacobi( 13 , 8 ) =0.0;
+    jacobi( 13 , 8 ) =-k50(Tg)*n[13];
     jacobi( 13 , 9 ) =0.0;
     jacobi( 13 , 10 ) =0.0;
     jacobi( 13 , 11 ) =0.0;
     jacobi( 13 , 12 ) =0.0;
-    jacobi( 13 , 13 ) =-diffusion.Da_Si2H4m*diff ;
-    jacobi( 13 , 14 ) =0.0;
+    jacobi( 13 , 13 ) = -k48(Tg)*n[5] -k49(Tg)*n[14]
+	-k50(Tg)*n[8]-diffusion.Da_Si2H4m*diff;
+    jacobi( 13 , 14 ) =-k49(Tg)*n[13];
     jacobi( 13 , 15 ) =0.0;
     jacobi( 13 , 16 ) =0.0;
     jacobi( 13 , 17 ) =0.0;
@@ -1092,6 +1186,7 @@ struct jacobian
     jacobi( 13 , 19 ) =0.0;
     jacobi( 13 , 20 ) =0.0;
     jacobi( 13 , 21 ) =0.0;
+    jacobi( 13 , 22 ) =0.0;
     jacobi( 14 , 0 ) =0.0;
     jacobi( 14 , 1 ) =0.0;
     jacobi( 14 , 2 ) =k35(Tg)*n[4];
@@ -1105,15 +1200,16 @@ struct jacobian
     jacobi( 14 , 10 ) =0.0;
     jacobi( 14 , 11 ) =0.0;
     jacobi( 14 , 12 ) =0.0;
-    jacobi( 14 , 13 ) =0.0;
-    jacobi( 14 , 14 ) =0.0;
+    jacobi( 14 , 13 ) =-k49(Tg)*n[14];
+    jacobi( 14 , 14 ) =-k49(Tg)*n[13] -k53(Tg)*n[16];
     jacobi( 14 , 15 ) =0.0;
-    jacobi( 14 , 16 ) =0.0;
+    jacobi( 14 , 16 ) =-k53(Tg)*n[14];
     jacobi( 14 , 17 ) =0.0;
     jacobi( 14 , 18 ) =0.0;
     jacobi( 14 , 19 ) =0.0;
     jacobi( 14 , 20 ) =0.0;
     jacobi( 14 , 21 ) =0.0;
+    jacobi( 14 , 22 ) =0.0;
     jacobi( 15 , 0 ) =0.0;
     jacobi( 15 , 1 ) =0.0;
     jacobi( 15 , 2 ) =k38(Tg)*n[8];
@@ -1125,39 +1221,43 @@ struct jacobian
     jacobi( 15 , 8 ) =k38(Tg)*n[2];
     jacobi( 15 , 9 ) =0.0;
     jacobi( 15 , 10 ) =0.0;
-    jacobi( 15 , 11 ) =0.0;
+    jacobi( 15 , 11 ) =-k56(Tg)*n[15];
     jacobi( 15 , 12 ) =0.0;
     jacobi( 15 , 13 ) =0.0;
     jacobi( 15 , 14 ) =0.0;
-    jacobi( 15 , 15 ) =-diffusion.Da_Si2H3m*diff;
+    jacobi( 15 , 15 ) = -k56(Tg)*n[11]-diffusion.Da_Si2H3m*diff;
     jacobi( 15 , 16 ) =0.0;
     jacobi( 15 , 17 ) =0.0;
     jacobi( 15 , 18 ) =0.0;
     jacobi( 15 , 19 ) =0.0;
     jacobi( 15 , 20 ) =0.0;
     jacobi( 15 , 21 ) =0.0;
+    jacobi( 15 , 22 ) =0.0;
     jacobi( 16 , 0 ) =0.0;
     jacobi( 16 , 1 ) =0.0;
     jacobi( 16 , 2 ) =k39(Tg)*n[5];
     jacobi( 16 , 3 ) =0.0;
     jacobi( 16 , 4 ) =0.0;
-    jacobi( 16 , 5 ) =k39(Tg)*n[2];
-    jacobi( 16 , 6 ) =0.0;
+    jacobi( 16 , 5 ) =k39(Tg)*n[2]-k52(Tg)*n[16];
+    jacobi( 16 , 6 ) =-k55(Tg)*n[16];
     jacobi( 16 , 7 ) =0.0;
-    jacobi( 16 , 8 ) =0.0;
+    jacobi( 16 , 8 ) =-k54(Tg)*n[16];
     jacobi( 16 , 9 ) =0.0;
     jacobi( 16 , 10 ) =0.0;
-    jacobi( 16 , 11 ) =0.0;
+    jacobi( 16 , 11 ) =-k57(Tg)*n[16];
     jacobi( 16 , 12 ) =0.0;
     jacobi( 16 , 13 ) =0.0;
-    jacobi( 16 , 14 ) =0.0;
+    jacobi( 16 , 14 ) =-k53(Tg)*n[16];
     jacobi( 16 , 15 ) =0.0;
-    jacobi( 16 , 16 ) = -diffusion.Da_Si2H5m*diff;
+    jacobi( 16 , 16 ) = -k51(Tg)*n[22]-k52(Tg)*n[5] -k53(Tg)*n[14]
+	-k54(Tg)*n[8] -k55(Tg)*n[6] -k57(Tg)*n[11]
+	-diffusion.Da_Si2H5m*diff;
     jacobi( 16 , 17 ) =0.0;
     jacobi( 16 , 18 ) =0.0;
     jacobi( 16 , 19 ) =0.0;
     jacobi( 16 , 20 ) =0.0;
     jacobi( 16 , 21 ) =0.0;
+    jacobi( 16 , 22 ) =-k51(Tg)*n[16];
     jacobi( 17 , 0 ) =k44(Te)*n[18] -k45(Te)*n[17] ;
     jacobi( 17 , 1 ) =0.0;
     jacobi( 17 , 2 ) =0.0;
@@ -1175,12 +1275,13 @@ struct jacobian
     jacobi( 17 , 14 ) =0.0;
     jacobi( 17 , 15 ) =0.0;
     jacobi( 17 , 16 ) =0.0;
-    jacobi( 17 , 17 ) = -k45(Te)*n[0]  -k47(Tg)*n[10]
-	-diffusion.Da_SiHm*diff; 
+    jacobi( 17 , 17 ) =  -k45(Te)*n[0] -k47(Tg)*n[10]
+	-diffusion.Da_SiHm*diff;
     jacobi( 17 , 18 ) =k44(Te)*n[0]  +k46(Tg)*n[3];
     jacobi( 17 , 19 ) =0.0;
     jacobi( 17 , 20 ) =0.0;
     jacobi( 17 , 21 ) =0.0;
+    jacobi( 17 , 22 ) =0.0;
     jacobi( 18 , 0 ) = -k44(Te)*n[18] +k45(Te)*n[17] ;
     jacobi( 18 , 1 ) = k21(Tg)*n[8] ;
     jacobi( 18 , 2 ) = 0.0;
@@ -1203,6 +1304,7 @@ struct jacobian
     jacobi( 18 , 19 ) = 0.0;
     jacobi( 18 , 20 ) = 0.0;
     jacobi( 18 , 21 ) = 0.0;
+    jacobi( 18 , 22 ) = 0.0;
     jacobi( 19 , 0 ) = 0.0;
     jacobi( 19 , 1 ) = 0.0;
     jacobi( 19 , 2 ) = 0.0;
@@ -1225,6 +1327,7 @@ struct jacobian
     jacobi( 19 , 19 ) = 0.0;
     jacobi( 19 , 20 ) = 0.0;
     jacobi( 19 , 21 ) = 0.0;
+    jacobi( 19 , 22 ) = 0.0;
     jacobi( 20 , 0 ) = k1(Te)*n_Ar +k3(Te)*n[1] ;
     jacobi( 20 , 1 ) =+k3(Te)*n[0] +k4(Te)*2.*n[1];
     jacobi( 20 , 2 ) =-k42(Tg)*n[20];
@@ -1245,30 +1348,57 @@ struct jacobian
     jacobi( 20 , 17 ) =0.0;
     jacobi( 20 , 18 ) =0.0;
     jacobi( 20 , 19 ) =0.0;
-    jacobi( 20 , 20 ) =-k41(Tg)*n[3]-k42(Tg)*n[2]-diffusion.Da_Arp*diff;
+    jacobi( 20 , 20 ) =
+        -k41(Tg)*n[3]-k42(Tg)*n[2]-diffusion.Da_Arp*diff;
     jacobi( 20 , 21 ) =0.0;
+    jacobi( 20 , 22 ) =0.0;
     jacobi( 21 , 0 ) = 0.0 ;
     jacobi( 21 , 1 ) =0.0;
-    jacobi( 21 , 2 ) =k58(Tg)*n[4];
+    jacobi( 21 , 2 ) =0.0;
     jacobi( 21 , 3 ) =0.0;
-    jacobi( 21 , 4 ) = k58(Tg)*n[2];
-    jacobi( 21 , 5 ) =0.0;
-    jacobi( 21 , 6 ) =0.0;
+    jacobi( 21 , 4 ) = 0.0;
+    jacobi( 21 , 5 ) =+k48(Tg)*n[13]+k52(Tg)*n[16];
+    jacobi( 21 , 6 ) =+k55(Tg)*n[16] ;
     jacobi( 21 , 7 ) =0.0;
-    jacobi( 21 , 8 ) =0.0;
+    jacobi( 21 , 8 ) =+k50(Tg)*n[13]+k54(Tg)*n[16];
     jacobi( 21 , 9 ) =0.0;
     jacobi( 21 , 10 ) =0.0;
-    jacobi( 21 , 11 ) =0.0;
+    jacobi( 21 , 11 ) =k56(Tg)*n[15]+k57(Tg)*n[16];
     jacobi( 21 , 12 ) =0.0;
-    jacobi( 21 , 13 ) =0.0;
-    jacobi( 21 , 14 ) =0.0;
-    jacobi( 21 , 15 ) =0.0;
-    jacobi( 21 , 16 ) =0.0;
+    jacobi( 21 , 13 ) =+k48(Tg)*n[5] +k49(Tg)*n[14] +k50(Tg)*n[8];
+    jacobi( 21 , 14 ) =+k49(Tg)*n[13]+k53(Tg)*n[16];
+    jacobi( 21 , 15 ) =k56(Tg)*n[11];
+    jacobi( 21 , 16 ) =+k51(Tg)*n[22]+k52(Tg)*n[5] +k53(Tg)*n[14]
+	+k54(Tg)*n[8] +k55(Tg)*n[6] +k57(Tg)*n[11];
     jacobi( 21 , 17 ) =0.0;
     jacobi( 21 , 18 ) =0.0;
     jacobi( 21 , 19 ) =0.0;
     jacobi( 21 , 20 ) =0.0;
     jacobi( 21 , 21 ) =0.0;
+    jacobi( 21 , 22 ) =k51(Tg)*n[16];
+    jacobi( 22 , 0 ) = 0.0 ;
+    jacobi( 22 , 1 ) =0.0;
+    jacobi( 22 , 2 ) =k58(Tg)*n[4];
+    jacobi( 22 , 3 ) =0.0;
+    jacobi( 22 , 4 ) = k58(Tg)*n[2];
+    jacobi( 22 , 5 ) =0.0;
+    jacobi( 22 , 6 ) =0.0;
+    jacobi( 22 , 7 ) =0.0;
+    jacobi( 22 , 8 ) =0.0;
+    jacobi( 22 , 9 ) =0.0;
+    jacobi( 22 , 10 ) =0.0;
+    jacobi( 22 , 11 ) =0.0;
+    jacobi( 22 , 12 ) =0.0;
+    jacobi( 22 , 13 ) =0.0;
+    jacobi( 22 , 14 ) =0.0;
+    jacobi( 22 , 15 ) =0.0;
+    jacobi( 22 , 16 ) =-k51(Tg)*n[22];
+    jacobi( 22 , 17 ) =0.0;
+    jacobi( 22 , 18 ) =0.0;
+    jacobi( 22 , 19 ) =0.0;
+    jacobi( 22 , 20 ) =0.0;
+    jacobi( 22 , 21 ) =0.0;
+    jacobi( 22 , 22 ) =-k51(Tg)*n[16];
 
     dfdt( 0 ) = 0.0;
     dfdt( 1 ) = 0.0;
@@ -1292,11 +1422,12 @@ struct jacobian
     dfdt( 19 ) = 0.0;
     dfdt( 20 ) = 0.0;
     dfdt( 21 ) = 0.0;
-
+    dfdt( 22 ) = 0.0;
   }
- Diffusion diffusion;
+  Diffusion diffusion;
   value_type Te;
 };
+
 
 struct etemperature
 {
@@ -1316,7 +1447,6 @@ struct etemperature
   state_type n;
 };
 
-
 void write_density( const value_type t, const value_type Te, const state_type &n)
 {
   cout << t  << '\t' <<Te <<'\t' << n[0] << '\t' << n[1] << '\t'
@@ -1325,78 +1455,85 @@ void write_density( const value_type t, const value_type Te, const state_type &n
                << n[10] << '\t' << n[11] << '\t' << n[12] << '\t'
                << n[13] << '\t' << n[14] << '\t' << n[15] << '\t'
                << n[16] << '\t' << n[17] << '\t'<< n[18] << '\t'
-               << n[19] << '\t' << n[20]  << '\t'<< n[21]<<endl;
+               << n[19] << '\t' << n[20]  << '\t'<< n[21]<<'\t'<<n[22]<<endl;
 }
 
 int main(int argc, char **argv)
-{ 
-
-
-
+{
   cout <<"t"<<'\t'<<"Te"<<'\t'<<"e"<<'\t'<<"Armet"<<'\t'<< "SiH3m"<<'\t'
-               << "SiH2"<<'\t'<< "SiH3p"<<'\t'<< "SiH4"<<'\t'<< "SiH3"<<'\t'
+               << "SiH2m"<<'\t'<< "SiH3p"<<'\t'<< "SiH4"<<'\t'<< "SiH3"<<'\t'
                <<"H"<<'\t'<< "SiH2"<<'\t'<< "H2"<<'\t'<< "H2p"<<'\t'<< "Si2H5"
                <<'\t'<< "Si2H2"<<'\t'<<"Si2H4m"<<'\t'<<"Si2H6"<<'\t'<< "Si2H3m"
                <<'\t'<< "Si2H5m"<<'\t'<< "SiHm"<<'\t'<<"SiH"<<'\t'<< "Si"<<'\t'
-               << "Arp"<<'\t'<<"Si2H4"<<endl;
+               << "Arp"<<'\t'<<"NP"<<'\t'<<"Si2H4"<<endl;
 //clock_t t1,t2;
 
   // Time variables
   value_type t = 0.0;
   value_type dt = 1.0e-8;
-  value_type Tmax = 1;
+  value_type Tmax = 20e-3;
   value_type NT = Tmax/dt;
 
   // Root finding variables
-  value_type min = 0.001;
+  value_type min = 0.05;
   value_type max = 20.0;
   boost::uintmax_t max_iter = 500;
   eps_tolerance<value_type> tol(30);
 
   // initial values
   value_type Te = 3.0;
-
+    
+/*0=e, 1=Armet, 2=SiH3-, 3=SiH2-, 4=SiH3+, 5=SiH4, 6=SiH3,
+ 7=H, 8=SiH2, 9=H2, 10=H2+, 11=Si2H5, 12=Si2H2, 13=Si2H4-,
+ 14=Si2H6, 15=Si2H3-, 16=Si2H5-, 17=SiH-, 18=SiH, 19=Si, 20=Arp, 21=Si2H4 */
   // Density vectors and initial condition
   state_type n_ini(Nbr_espece, 0.0); // initial conditions
-  n_ini[0] = n_e_ini;
+  n_ini[0] = n_Arp_ini;
   n_ini[1] = n_Arp_ini;  // initial conditions
-  n_ini[2] = 0.0;
-  n_ini[3] = 0.0;
-  n_ini[4] = 0.0;
+  n_ini[2] = 10;
+  n_ini[3] = 10;
+  n_ini[4] = 10;
   n_ini[5] = n_SiH4_ini;
-  n_ini[6] = 0.0;
-  n_ini[7] = 0.0;
-  n_ini[8] = 0.0;
-  n_ini[9] = 0.0;
-  n_ini[10] = 0.0;
-  n_ini[11] = 0.0;
-  n_ini[12] = 0.0;
-  n_ini[13] = 0.0;
-  n_ini[14] = 0.0;
-  n_ini[15] = 0.0;
-  n_ini[16] = 0.0;
-  n_ini[17] = 0.0;
-  n_ini[18] = 0.0;
-  n_ini[19] = 0.0;
+  n_ini[6] = 10;
+  n_ini[7] = 10;
+  n_ini[8] = 10;
+  n_ini[9] = 10;
+  n_ini[10] = 10;
+  n_ini[11] = 10;
+  n_ini[12] = 10;
+  n_ini[13] = 10;
+  n_ini[14] = 10;
+  n_ini[15] = 10;
+  n_ini[16] = 10;
+  n_ini[17] = 10;
+  n_ini[18] = 10;
+  n_ini[19] = 10;
   n_ini[20] = n_Arp_ini;
-  n_ini[21] = 0.0;
-
+  n_ini[21] = 10;
+  n_ini[22] = 10;
 
   state_type n_new(Nbr_espece, 0.0);  // first step same as initial conditions
   n_new = n_ini;
   state_type n_err(Nbr_espece, 0.0); //error
 
-   // declare the functor etemperature
+  // declare the functor etemperature
   etemperature etemp;
   // assign initial values to functor etemp
   etemp.n = n_ini;
 
-// Find Te first calculation
+  //cerr << "\n[ii] Electrons  = " << etemp.n[0] << endl;
+  //cerr << "\n[ii] Metastables  = " << etemp.n[1] << endl;
+//   cout << "\n[ii] n  = " << etemp.n[2] << endl;
+
+//t1=clock();
+  // Find Te first calculation
   pair<value_type, value_type> pair_Te =\
                 toms748_solve(etemp, min, max, tol, max_iter);
 
   Te = pair_Te.first;
   cerr << "\n[ii] Initial Temperature  = " << Te << endl;
+//t2=clock()-t1;
+//cout<<"timesec"<<(value_type )t2/CLOCKS_PER_SEC << endl;
 
   // declare system and jacobian
   nsystem sys;
@@ -1420,31 +1557,31 @@ int main(int argc, char **argv)
     {
       write_density(t, Te, n_new);
     }
-    
     // Find new Te
     pair<value_type, value_type> pair_Te =\
                   toms748_solve(etemp, min, max, tol, max_iter);
 
     Te = pair_Te.first;
+
     t+= dt;
     n_ini = n_new;//update
   }
 
-  value_type charge= (n_new[20]+n_new[4]+n_new[10]-n_new[0]-n_new[2]-n_new[3]-n_new[13]-n_new[15]-n_new[16]-n_new[17])/n_Arp_ini;
+  value_type charge= (n_new[20]+n_new[4]+n_new[10]-n_new[0]-n_new[2]-n_new[3]-n_new[13]-n_new[15]-n_new[16]-n_new[17]-n_new[21])/n_Arp_ini;
 
   cerr<<"charge/dArp="<<charge<<endl;
 
   value_type Si=(n_new[2]+n_new[3]+n_new[4]+n_new[13]*2+2*n_new[15]+n_new[16]*2
           +n_new[17]+n_new[5]+n_new[6]+n_new[8]+n_new[18]+2*n_new[11]+n_new[19]
-          +n_new[12]*2+n_new[14]*2+2*n_new[21])/n_SiH4_ini;
+          +n_new[12]*2+n_new[14]*2+2*n_new[22])/n_SiH4_ini;
 
   cerr<<"Si="<<Si<<endl;
 
 
-  value_type H=(3*n_new[2]+2*n_new[3]+3*n_new[4]+4*n_new[5]+3*n_new[6]+n_new[7]
-	+2*n_new[8]+2*n_new[9]+2*n_new[10]+5* n_new[11]+2*n_new[12]
-	+4*n_new[13]+6*n_new[14]+3*n_new[15]+5*n_new[16]+n_new[17]
-         +n_new[18 ]+4*n_new[21])/(4*n_SiH4_ini);
+  value_type H=(3*n_new[2]+2*n_new[3]+3*n_new[4]+2*n_new[10]+4*n_new[13]+3*n_new[15]
+         +5*n_new[16]+n_new[17]+4*n_new[5]+3*n_new[6]+n_new[7]+2*n_new[8]
+         +2*n_new[9]+n_new[18 ]+5* n_new[11]+2*n_new[12]+6*n_new[14]+4*n_new[22])
+            /(4*n_SiH4_ini);
 
   cerr<<"H="<<H<<endl;
 
