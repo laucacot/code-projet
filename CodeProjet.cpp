@@ -1,8 +1,6 @@
 #include <iostream>
 #include <string>
 #include <cmath>
-//#include <boost/serialization/array_wrapper.hpp>
-
 #include <vector>
 // Optimization
 #define BOOST_UBLAS_NDEBUG
@@ -15,15 +13,18 @@
 #include <time.h>
 #include <stdlib.h>
 
+#include <boost/phoenix/core.hpp>
+#include <boost/phoenix/operator.hpp>
+
 using namespace std;
 using namespace boost::numeric::odeint;
 using namespace boost::math::tools;
+namespace phoenix = boost::phoenix;
 
 // type definitions
 typedef double value_type;// or typedef float value_type;
-typedef boost::numeric::ublas::vector< value_type > state_type;
-typedef boost::numeric::ublas::matrix< value_type > matrix_type;
-typedef rosenbrock4< value_type > stepper_type;
+typedef vector< value_type > state_type;
+
 
 // constants
 const value_type pressure = 13.332237; //pascal soit 0.1 torr
@@ -667,9 +668,10 @@ public:
 
 };
 
-struct nsystem
+struct stiff_system
 {
-  void operator()(const state_type &n, state_type &dndt, const value_type &t)
+inline
+  void operator()(const state_type &n, state_type &dndt, const value_type &t)const
   {
 
     // update the diffusion
@@ -762,7 +764,7 @@ struct nsystem
   Diffusion diffusion;
 };
 
-struct jacobian
+/*struct jacobian
 {
   void operator()(const state_type &n, matrix_type &jacobi,
                   const value_type &t, state_type &dfdt ) const
@@ -1296,7 +1298,7 @@ struct jacobian
   }
  Diffusion diffusion;
   value_type Te;
-};
+};*/
 
 struct etemperature
 {
@@ -1398,39 +1400,34 @@ int main(int argc, char **argv)
   Te = pair_Te.first;
   cerr << "\n[ii] Initial Temperature  = " << Te << endl;
 
-  // declare system and jacobian
-  nsystem sys;
-  jacobian jac;
 
-  // declare stepper Rosenbrock
-  stepper_type stepper;
+ stiff_system* ssys = new stiff_system();
 
-  for (int i = 1; i <= NT+1; i++)
-  {
-    // update Te in system and jacobian
-    sys.Te = Te;
-    jac.Te = Te;
+  auto stepper = make_controlled(1.0e-8, 1.0e-8,
+                                runge_kutta_cash_karp54< state_type >());
+  
 
-    // Integrate at least one step dt
-    stepper.do_step( std::make_pair( sys, jac ), n_new, t, dt, n_err);
-
-    // assign values to functor etemp
-    etemp.n = n_new;
-    if (i%((int)(NT/50))==0)
-    {
-      write_density(t, Te, n_new);
-    }
-    
-    // Find new Te
-    pair<value_type, value_type> pair_Te =\
-                  toms748_solve(etemp, min, max, tol, max_iter);
-
-    Te = pair_Te.first;
-    t+= dt;
-    n_ini = n_new;//update
-  }
-
-  value_type charge= (n_new[20]+n_new[4]+n_new[10]-n_new[0]-n_new[2]-n_new[3]-n_new[13]-n_new[15]-n_new[16]-n_new[17])/n_Arp_ini;
+size_t num_of_steps = integrate_adaptive(stepper, *ssys, n_new,
+                                           t, Tmax, 0.01,
+ cout << phoenix::arg_names::arg2 << '\t'
+                             << phoenix::arg_names::arg1[0] << '\t'
+                             << phoenix::arg_names::arg1[1] << '\t'
+		 << phoenix::arg_names::arg1[2] <<'\t'	<< phoenix::arg_names::arg1[3] << '\t'
+                             << phoenix::arg_names::arg1[4] << '\t'
+		 << phoenix::arg_names::arg1[5] <<'\t'	 << phoenix::arg_names::arg1[6] << '\t'
+                             << phoenix::arg_names::arg1[7] << '\t'
+		 << phoenix::arg_names::arg1[8] <<'\t'	<< phoenix::arg_names::arg1[9] << '\t'
+                             << phoenix::arg_names::arg1[10] << '\t'
+		 				<< phoenix::arg_names::arg1[11] << '\t'
+		 << phoenix::arg_names::arg1[12] <<'\t'	<< phoenix::arg_names::arg1[13] << '\t'
+                             << phoenix::arg_names::arg1[14] << '\t'
+		 << phoenix::arg_names::arg1[15] <<'\t'	 << phoenix::arg_names::arg1[16] << '\t'
+                             << phoenix::arg_names::arg1[17] << '\t'
+		 << phoenix::arg_names::arg1[18] <<'\t'	<< phoenix::arg_names::arg1[19] << '\t'
+                             << phoenix::arg_names::arg1[20] << '\t'
+                             << phoenix::arg_names::arg1[21] << '\t'<< phoenix::arg_names::arg1[1]
+                            *phoenix::arg_names::arg1[1] << "\n" );
+  /*value_type charge= (n_new[20]+n_new[4]+n_new[10]-n_new[0]-n_new[2]-n_new[3]-n_new[13]-n_new[15]-n_new[16]-n_new[17])/n_Arp_ini;
 
   cerr<<"charge/dArp="<<charge<<endl;
 
@@ -1448,7 +1445,8 @@ int main(int argc, char **argv)
 
   cerr<<"H="<<H<<endl;
 
-cerr<<Da_e<<endl;
+cerr<<Da_e<<endl;*/
+  delete(ssys);
   return 0;
 
 }
