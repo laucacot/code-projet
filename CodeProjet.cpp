@@ -63,28 +63,28 @@ const value_type d_SiHm=1.2e-10;
 
     //masses (kg)
 const value_type conv_masse=1.6726e-27;
-const value_type m_Ar=39.948*conv_masse;
+const value_type m_Ar=39.948;
 const value_type m_Arp=m_Ar;
-const value_type m_e=9.109e-31;
+const value_type m_e=5.45e-4;
 const value_type m_Armet=m_Ar;
-const value_type m_SiH4=(28.1+4)*conv_masse;
-const value_type m_SiH3=(28.1+3)*conv_masse;
-const value_type m_H=1*conv_masse;
-const value_type m_SiH2=(28.1+2)*conv_masse;
+const value_type m_SiH4=(28.1+4);
+const value_type m_SiH3=(28.1+3);
+const value_type m_H=1;
+const value_type m_SiH2=(28.1+2);
 const value_type m_SiH3m=m_SiH3;
 const value_type m_SiH2m=m_SiH2;
 const value_type m_SiH3p=m_SiH3;
-const value_type m_H2=2*conv_masse;
+const value_type m_H2=2;
 const value_type m_H2p=m_H2;
-const value_type m_SiH=(28.1+1)*conv_masse;
-const value_type m_Si2H5=(2*28.1+5)*conv_masse;
-const value_type m_Si=28.1*conv_masse;
-const value_type m_Si2H2=(2*28.1+2)*conv_masse;
-const value_type m_Si2H4m=(2*28.1+4)*conv_masse;
-const value_type m_Si2H6=(2*28.1+6)*conv_masse;
-const value_type m_Si2H3m=(2*28.1+3)*conv_masse;
-const value_type m_Si2H5m=(2*28.1+5)*conv_masse;
-const value_type m_SiHm=(28.1+1)*conv_masse;
+const value_type m_SiH=(28.1+1);
+const value_type m_Si2H5=(2*28.1+5);
+const value_type m_Si=28.1;
+const value_type m_Si2H2=(2*28.1+2);
+const value_type m_Si2H4m=(2*28.1+4);
+const value_type m_Si2H6=(2*28.1+6);
+const value_type m_Si2H3m=(2*28.1+3);
+const value_type m_Si2H5m=(2*28.1+5);
+const value_type m_SiHm=(28.1+1);
 
 //diffusion libre
 
@@ -92,7 +92,7 @@ const value_type m_SiHm=(28.1+1)*conv_masse;
 value_type DL (value_type d, value_type m)
 {
   value_type Diff_Libre;
-  Diff_Libre=2.175742492e-35 *((pow(Tg,(3/2)))/(pressure*pow(d,2)*pow(m,0.5)));
+  Diff_Libre=1.86e-3 (pow(320,3/2))/(0.1/760*pow(d,2))*pow((1/m+1/m_Ar),0.5);
 
   return Diff_Libre;
 }
@@ -492,7 +492,7 @@ public:
    **/
   void init() {
     DL_Arp=DL(d_Arp,m_Arp);
-    DL_e=DL(d_e,m_e);
+    DL_e=1.86e-3 (320*pow(Te,0.5))/(0.1/760*pow(d,2))*pow((1/m+1/m_Ar),0.5);
     DL_Armet=DL(d_Armet,m_Armet);
     DL_SiH3m=0.0;
     DL_SiH2m=0.0;
