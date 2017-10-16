@@ -92,7 +92,7 @@ const value_type m_SiHm=(28.1+1);
 value_type DL (value_type d, value_type m)
 {
   value_type Diff_Libre;
-  Diff_Libre=1.86e-3 *(pow(320,3/2))/(0.1/760*pow(d,2))*pow((1/m + 1/m_Ar),0.5);
+  Diff_Libre=1.86e-3 *(pow(320,3./2.))/((0.1/760)*pow(d,2))*pow((1./m + 1./m_Ar),0.5);
 
   return Diff_Libre;
 }
@@ -492,11 +492,12 @@ public:
    **/
   void init() {
     DL_Arp=DL(d_Arp,m_Arp);
-    DL_e=1.86e-3 *(320*pow(0.7,0.5))/(0.1/760*pow(d_e,2))*pow((1/m_e+1/m_Ar),0.5);
+    DL_e=1.86e-3 *(320*pow(0.7,0.5))/(0.1/760*pow(d_e,2.))*pow((1./m_e+1./m_Ar),0.5);
     DL_Armet=DL(d_Armet,m_Armet);
     DL_SiH3m=0.0;
     DL_SiH2m=0.0;
     DL_SiH3p=DL(d_SiH3p,m_SiH3p);
+//cerr<<DL_SiH3p<<endl;
     DL_H2p=DL(d_H2p,m_H2p);
     DL_Si2H4m=0.0;
     DL_Si2H3m=0.0;
@@ -576,6 +577,7 @@ public:
           /(mu_e*n[0] + mu_Arp*n[20] + mu_SiH3m*n[2] + mu_SiH2m*n[3]
           + mu_SiH3p*n[4] + mu_H2p*n[10] + mu_Si2H4m*n[13]
           + mu_Si2H3m*n[15] + mu_Si2H5m*n[16] +mu_SiHm*n[17]);
+//cerr<<Da_SiH3p<<endl;
 
     Da_H2p=(DL_H2p*(mu_e*n[0] + mu_SiH3m*n[2] + mu_SiH2m*n[3]
           + mu_Arp*n[20] + mu_SiH3p*n[4] + mu_Si2H4m*n[13]
