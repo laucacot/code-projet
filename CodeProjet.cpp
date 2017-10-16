@@ -92,7 +92,7 @@ const value_type m_SiHm=(28.1+1);
 value_type DL (value_type d, value_type m)
 {
   value_type Diff_Libre;
-  Diff_Libre=1.86e-3 (pow(320,3/2))/(0.1/760*pow(d,2))*pow((1/m+1/m_Ar),0.5);
+  Diff_Libre=1.86e-3 *(pow(320,3/2))/(0.1/760*pow(d,2))*pow((1/m + 1/m_Ar),0.5);
 
   return Diff_Libre;
 }
@@ -492,7 +492,7 @@ public:
    **/
   void init() {
     DL_Arp=DL(d_Arp,m_Arp);
-    DL_e=1.86e-3 (320*pow(Te,0.5))/(0.1/760*pow(d,2))*pow((1/m+1/m_Ar),0.5);
+    DL_e=1.86e-3 *(320*pow(0.7,0.5))/(0.1/760*pow(d_e,2))*pow((1/m_e+1/m_Ar),0.5);
     DL_Armet=DL(d_Armet,m_Armet);
     DL_SiH3m=0.0;
     DL_SiH2m=0.0;
@@ -1354,7 +1354,7 @@ int main(int argc, char **argv)
   eps_tolerance<value_type> tol(30);
 
   // initial values
-  value_type Te = 3.0;
+  value_type Te = 1.0;
 
   // Density vectors and initial condition
   state_type n_ini(Nbr_espece, 0.0); // initial conditions
@@ -1448,7 +1448,7 @@ int main(int argc, char **argv)
 
   cerr<<"H="<<H<<endl;
 
-cerr<<Da_e<<endl;
+//cerr<<Da_e<<endl;
   return 0;
 
 }
