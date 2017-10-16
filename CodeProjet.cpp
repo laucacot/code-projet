@@ -92,7 +92,7 @@ const value_type m_SiHm=(28.1+1)*conv_masse;
 value_type DL (value_type d, value_type m)
 {
   value_type Diff_Libre;
-  Diff_Libre=2.175742492e-35 *((pow(Tg,(3/2)))/(pressure*pow(d,2)*pow(m,0.5)));
+  Diff_Libre=2.175742492e-35 *((pow(320,(3./2.)))/(pressure*pow(d,2)*pow(m,0.5)));
 
   return Diff_Libre;
 }
@@ -497,6 +497,7 @@ public:
     DL_SiH3m=0.0;
     DL_SiH2m=0.0;
     DL_SiH3p=DL(d_SiH3p,m_SiH3p);
+//cerr<<DL_SiH3p<<endl;
     DL_H2p=DL(d_H2p,m_H2p);
     DL_Si2H4m=0.0;
     DL_Si2H3m=0.0;
