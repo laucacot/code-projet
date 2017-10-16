@@ -48,17 +48,17 @@ const float C=1.35e21;
 
     //diametre (m)
 
-const value_type d_e=0.5*(142e-12+2*2.8179e-15);
-const value_type d_Arp=1.2e-10;
-const value_type d_Armet=1.2e-10;
-const value_type d_SiH3m=1.2e-10;
-const value_type d_SiH2m=1.2e-10;
-const value_type d_SiH3p=1.2e-10;
-const value_type d_H2p=1.2e-10;
-const value_type d_Si2H4m=1.2e-10;
-const value_type d_Si2H3m=1.2e-10;
-const value_type d_Si2H5m=1.2e-10;
-const value_type d_SiHm=1.2e-10;
+const value_type d_e=0.5*(142e-2+2*2.8179e-5);
+const value_type d_Arp=1.2;
+const value_type d_Armet=1.2;
+const value_type d_SiH3m=1.2;
+const value_type d_SiH2m=1.2;
+const value_type d_SiH3p=1.2;
+const value_type d_H2p=1.2;
+const value_type d_Si2H4m=1.2;
+const value_type d_Si2H3m=1.2;
+const value_type d_Si2H5m=1.2;
+const value_type d_SiHm=1.2;
 
 
     //masses (kg)
@@ -92,7 +92,7 @@ const value_type m_SiHm=(28.1+1);
 value_type DL (value_type d, value_type m)
 {
   value_type Diff_Libre;
-  Diff_Libre=1.86e-3 *(pow(320,3./2.))/((0.1/760)*pow(d,2))*pow((1./m + 1./m_Ar),0.5);
+  Diff_Libre=1.86e-3 *(pow(320,3./2.))/((0.1/760)*pow(d,2))*pow((1./m + 1./m_Ar),0.5)*1e-4;
 
   return Diff_Libre;
 }
@@ -492,7 +492,7 @@ public:
    **/
   void init() {
     DL_Arp=DL(d_Arp,m_Arp);
-    DL_e=1.86e-3 *(320*pow(0.7,0.5))/(0.1/760*pow(d_e,2.))*pow((1./m_e+1./m_Ar),0.5);
+    DL_e=1.86e-3 *(320*pow(Te,0.5))/(0.1/760*pow(d_e,2.))*pow((1./m_e+1./m_Ar),0.5)*1e-4;
     DL_Armet=DL(d_Armet,m_Armet);
     DL_SiH3m=0.0;
     DL_SiH2m=0.0;
@@ -666,7 +666,7 @@ public:
   value_type Da_Si2H5m;
   value_type Da_SiHm;
 
-
+value_type Te;
 };
 
 struct nsystem
