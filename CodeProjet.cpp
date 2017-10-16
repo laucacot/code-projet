@@ -1448,7 +1448,7 @@ int main(int argc, char **argv)
 
   cerr<<"H="<<H<<endl;
 
-cerr<<Da_e<<endl;
+//cerr<<Da_e<<endl;
   return 0;
 
 }
