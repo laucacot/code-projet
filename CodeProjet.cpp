@@ -92,7 +92,7 @@ const value_type m_SiHm=(28.1+1);
 value_type DL (value_type d, value_type m)
 {
   value_type Diff_Libre;
-  Diff_Libre=1.86e-3 *(pow(320,3./2.))/((0.1/760)*pow(d,2))*pow((1./m + 1./m_Ar),0.5)*1e-4;
+  Diff_Libre=1.86e-3 *(pow(320,3./2.))/((0.1/760)*pow(d,2))*1e-4*pow((1./m + 1./m_Ar),0.5);
 
   return Diff_Libre;
 }
@@ -100,7 +100,7 @@ value_type DL (value_type d, value_type m)
 value_type mu (value_type dl)
 {
 value_type mobilite;
-mobilite=1.1604e4*dl/Tg;
+mobilite=dl/Tg;//1.1604e4*
 return mobilite;
 }
 
@@ -492,7 +492,8 @@ public:
    **/
   void init() {
     DL_Arp=DL(d_Arp,m_Arp);
-    DL_e=1.86e-3 *(320*pow(Te,0.5))/(0.1/760*pow(d_e,2.))*pow((1./m_e+1./m_Ar),0.5)*1e-4;
+cerr<<"diffusion libre"<<DL_Arp<<endl;
+    DL_e=1.86e-3 *(320*pow(11600*Te,0.5))/(0.1/760*pow(d_e,2.))*pow((1./m_e+1./m_Ar),0.5)*1e-4;
     DL_Armet=DL(d_Armet,m_Armet);
     DL_SiH3m=0.0;
     DL_SiH2m=0.0;
@@ -505,6 +506,7 @@ public:
     DL_SiHm=0.0;
     mu_e=mu(DL_e);
     mu_Arp=mu(DL_Arp);
+cerr<<"mobilite"<<mu_Arp<<endl;
     mu_Armet=mu(DL_Armet);
     mu_SiH3m=mu(DL_SiH3m);
     mu_SiH2m=mu(DL_SiH2m);
