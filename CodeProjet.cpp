@@ -27,16 +27,16 @@ typedef rosenbrock4< value_type > stepper_type;
 
 // constants
 const value_type pression = 0.1/760; //atm soit 0.1 torr et 13 pascal 
-const value_type L = 3e-2; //distance netre deux plaques en m
+const value_type L = 3.e-2; //distance netre deux plaques en m
 const value_type pi = M_PI;
-const value_type diff = pow((pi/L), 2);//facteur pour la diffusion 
+const value_type diff = pow((pi/L), 2.);//facteur pour la diffusion 
 const value_type n_Ar =  pression*2.69e25; //densite d'argon en m-3
-const value_type n_SiH4_ini = n_Ar/30.; //densite de SiH4 initiale
+const value_type n_SiH4_ini = n_Ar/80.; //densite de SiH4 initiale
 const int Nbr_espece=21;
-const value_type DP = 1.e22;//eV/s.m3 puissance totale du systeme par unite de volume imposee
-const float C=1.35e21;// m-3/s taux d'injection du SiH4 dans le réacteur
+const value_type DP = 1.e23;//eV/s.m3 puissance totale du systeme par unite de volume imposee
+const float C=1.e20;// m-3/s taux d'injection du SiH4 dans le réacteur
 const value_type Tg =0.02758 ; //eV soit 320 K
-
+const float D=1.;// m-3/s taux d'injection du SiH4 dans le réacteur
 
 //calcul des diffusions
 state_type DL(Nbr_espece, 0.0); //vecteur de diffusion libre en m2/s
@@ -84,7 +84,7 @@ value_type k5 (value_type Te) //K5 Ar* + e -> Ar + e
 value_type k6 (value_type Te) //K6 SiH4 + e -> SiH3 + H + e
 {
     value_type K6;
-    K6=1.83E-9*pow((Te),-1)*exp(-(10.68)/(Te));
+    K6=1.83E-9*pow((Te),-1.)*exp(-(10.68)/(Te))/D;
     return K6;
 
 }
@@ -92,7 +92,7 @@ value_type k6 (value_type Te) //K6 SiH4 + e -> SiH3 + H + e
 value_type k7 (value_type Te) //K7 SiH4 + e -> SiH2 + 2H + e
 {
     value_type K7;
-    K7=8.97E-9*pow((Te),-1)*exp(-(10.68)/(Te));
+    K7=8.97E-9*pow((Te),-1.)*exp(-(10.68)/(Te));
     return K7;
 
 }
@@ -100,7 +100,7 @@ value_type k7 (value_type Te) //K7 SiH4 + e -> SiH2 + 2H + e
 value_type k8 (value_type Te) //K8 SiH4 + e -> SiH3- + H
 {
     value_type K8;
-    K8=3.77E-9*pow((Te),-1.627)*exp(-(8.29)/(Te));
+    K8=3.77E-9*pow((Te),-1.63)*exp(-(8.29)/(Te));
     return K8;
 
 }
@@ -108,7 +108,7 @@ value_type k8 (value_type Te) //K8 SiH4 + e -> SiH3- + H
 value_type k9 (value_type Te) //K9 SiH4 + e -> SiH2- + 2H
 {
     value_type K9;
-    K9=3.77E-9*pow((Te),-1.627)*exp(-(8.29)/(Te));
+    K9=3.77E-9*pow((Te),-1.63)*exp(-(8.29)/(Te));
     return K9;
 
 }
@@ -117,7 +117,7 @@ value_type k10 (value_type Te) //K10 SiH4 + e -> SiH3+ + H + 2e
 {
 
     value_type K10;
-    K10= 2.50E2*pow((Te),-2.93)*exp(-(24.1)/(Te));
+    K10= 2.5e2*pow((Te),-2.93)*exp(-(24.1)/(Te))/D;
     return K10;
 
 }
@@ -134,7 +134,7 @@ value_type k11 (value_type Te) //K11 SiH3 + e -> SiH2- + H
 value_type k12 (value_type Te) //K12 SiH3 + e -> SiH3+  + 2e
 {
     value_type K12;
-    K12= 2.26E-16*pow((Te),0.5)*exp(-(1.30)/(Te));
+    K12= 2.26E-16*pow((Te),0.5)*exp(-(1.30)/(Te))/D;
     return K12;
 
 }
@@ -142,7 +142,7 @@ value_type k12 (value_type Te) //K12 SiH3 + e -> SiH3+  + 2e
 value_type k13 (value_type Te) //K13 SiH3- + e -> SiH3 + 2e
 {
     value_type K13;
-    K13=3.15E-16*pow((Te),0.5)*exp(-(1.16)/(Te));
+    K13=3.15E-16*pow((Te),0.5)*exp(-(1.16)/(Te))/D;
     return K13;
 
 }
@@ -183,7 +183,7 @@ value_type k17 (value_type Te) //K17 H2 + e ->  H2+ + 2e
 value_type k18(value_type Tg) //K18 SiH4 + Ar* -> SiH3 + H + Ar
 {
     value_type K18;
-    K18 = 1.400e-16;
+    K18 = 1.400e-16/D;
     return K18;
 }
 
@@ -240,14 +240,14 @@ value_type k25 (value_type Tg) //K25 SiH2 + H2 -> SiH4
 value_type k26 (value_type Tg) //K26 SiH2  -> Si + H2
 {
     value_type K26;
-    K26=1.51E-9*pow((Tg),1.76)*exp(-(1.66)/(Tg));
+    K26=1.51E-9*pow((Tg),1.658)*exp(-(1.66)/(Tg));
     return K26;
 }
 
 value_type k27 (value_type Tg) //K27 SiH4 + H -> H2 + SiH3
 {
     value_type K27;
-    K27=2.44E-22*pow((Tg),1.9)*exp(-(0.09)/(Tg));
+    K27=2.44E-22*pow((Tg),1.9)*exp(-(0.09)/(Tg))/D;
     return K27;
 }
 
@@ -275,7 +275,7 @@ value_type k30 (value_type Tg) //K30 SiH3-> SiH + H2
 value_type k31 (value_type Tg) //K31 SiH3 + H -> SiH2 + H2
 {
     value_type K31;
-    K31=2.49E-17*exp(-(0.11)/(Tg));
+    K31=2.49E-17*exp(-(0.1084)/(Tg));
     return K31;
 }
 
@@ -289,7 +289,7 @@ value_type k32 (value_type Tg) //K32 SiH2- + H2+ -> SiH2 + H2
 value_type k33 (value_type Tg) //K33 SiH3- + H2+ -> SiH3 + H2
 {
     value_type K33;
-    K33=5.55E-12*pow((Tg),-0.5);
+    K33=5.55E-12*pow((Tg),-0.5)/D;
     return K33;
 }
 
@@ -352,7 +352,7 @@ value_type k41 (value_type Tg) //K41 SiH2- + Ar+ -> SiH2 + Ar
 value_type k42 (value_type Tg) //K42 SiH3- + Ar+ -> SiH3 + Ar
 {
     value_type K42;
-    K42=1.44E-12*pow((Tg),-0.5);
+    K42=1.44E-12*pow((Tg),-0.5)/D;
     return K42;
 }
 
@@ -425,12 +425,12 @@ struct nsystem
       + 2.*n[12] + 2.*n[13] + 2.*n[14] + 2.*n[15] + 2.*n[16] + n[17] 
       + n[18] + n[19]; //somme de tous les atomes de si 
 
-    dndt[0]=k1(Te)*n_Ar*n[0] +k3(Te)*n[1]*n[0] +k4(Tg)*pow(n[1],2) -k8(Te)*n[5]*n[0]
+    dndt[0]=k1(Te)*n_Ar*n[0] +k3(Te)*n[1]*n[0] +k4(Tg)*pow(n[1],2.) -k8(Te)*n[5]*n[0]
         -k9(Te)*n[5]*n[0] +k10(Te)*n[5]*n[0] -k11(Te)*n[6]*n[0] +k12(Te)*n[0]*n[6]
         +k13(Te)*n[2]*n[0] +k14(Te)*n[3]*n[0] -k15(Te)*n[0]*n[8] +k17(Te)*n[9]*n[0]
         -k43(Te)*n[6]*n[0]-k44(Te)*n[18]*n[0] +k45(Te)*n[0]*n[17]-DA[0]*n[0];
 
-    dndt[1]= k2(Te)*n_Ar*n[0] -k3(Te)*n[1]*n[0] -2*k4(Tg)*pow(n[1],2) -k5(Te)*n[1]*n[0]
+    dndt[1]= k2(Te)*n_Ar*n[0] -k3(Te)*n[1]*n[0] -2*k4(Tg)*pow(n[1],2.) -k5(Te)*n[1]*n[0]
         -k18(Tg)*n[1]*n[5] -k19(Tg)*n[1]*n[5] -k20(Tg)*n[6]*n[1] -k21(Tg)*n[8]*n[1]
         -k22(Tg)*n[9]*n[1] -DA[1]*n[1];
 
@@ -464,13 +464,13 @@ struct nsystem
 
     dndt[8]= k7(Te)*n[0]*n[5] +k14(Te)*n[3]*n[0] -k15(Te)*n[0]*n[8] +k19(Tg)*n[1]*n[5]
         +k20(Tg)*n[6]*n[1] -k21(Tg)*n[8]*n[1] +k23(Tg)*pow(n[6],2) -k25(Tg)*n[8]*n[9]
-        -k26(Tg)*n[8] -2*k28(Tg)*pow(n[8],2) -k29(Tg)*n[8]*n[7] +k31(Tg)*n[6]*n[7]
+        -k26(Tg)*n[8] -2*k28(Tg)*pow(n[8],2.) -k29(Tg)*n[8]*n[7] +k31(Tg)*n[6]*n[7]
 	+k32(Tg)*n[3]*n[10]
         +k37(Tg)*n[3]*n[6] -k38(Tg)*n[2]*n[8] +k41(Tg)*n[3]*n[20] +k46(Tg)*n[3]*n[18]
 	- C * n[8] /dSi ;
 
     dndt[9]=-k16(Te)*n[9]*n[0] -k17(Te)*n[9]*n[0] -k22(Tg)*n[9]*n[1] +k24(Tg)*n[5]*n[6]
-        -k25(Tg)*n[8]*n[9] +k26(Tg)*n[8] +k27(Tg)*n[5]*n[7] +k28(Tg)*pow(n[8],2) +k29(Tg)
+        -k25(Tg)*n[8]*n[9] +k26(Tg)*n[8] +k27(Tg)*n[5]*n[7] +k28(Tg)*pow(n[8],2.) +k29(Tg)
 	*n[8]*n[7]+k30(Tg)*n[6] +k31(Tg)*n[6]*n[7] +k32(Tg)*n[3]*n[10] +k33(Tg)*n[2]*n[10]
 	+k34(Tg)*n[2]*n[6]+ k36(Tg)*n[3]*n[5] +k38(Tg)*n[2]*n[8] +k39(Tg)*n[2]*n[5]
 	+k47(Tg)*n[17]*n[10] + DA[10]*n[10] - C * n[9] /dSi; // H2+ + e -> H2 sur paroi
@@ -499,7 +499,7 @@ struct nsystem
 
     dndt[19]=k26(Tg)*n[8]- C * n[19] /dSi;
 
-    dndt[20]=k1(Te)*n_Ar*n[0] +k3(Te)*n[1]*n[0] +k4(Tg)*pow(n[1],2)
+    dndt[20]=k1(Te)*n_Ar*n[0] +k3(Te)*n[1]*n[0] +k4(Tg)*pow(n[1],2.)
         -k41(Tg)*n[3]*n[20]-k42(Tg)*n[2]*n[20] -DA[20]*n[20];
 
   }
@@ -1095,7 +1095,7 @@ mu[20]= DL[20]/Tg;
 // Time variables
   value_type t = 0.0;
   value_type dt = 1.0e-8;
-  value_type Tmax = 20e-3;
+  value_type Tmax = 20.e-3;
   value_type NT = Tmax/dt;
 
   // Root finding variables
@@ -1134,8 +1134,9 @@ value_type n_DL= -n_new[0]*DL[0] + n_new[4]*DL[4] + n_new[10]*DL[10] + n_new[20]
 
 DA[0]=(DL[0]+mu[0]*n_DL/n_mu)*diff; //s-1
 DA[1]=DL[1]*diff;
-DA[4]=(DL[4]+mu[4]*n_DL/n_mu)*diff;
-DA[20]=(DL[20]+mu[20]*n_DL/n_mu)*diff;
+DA[4]=(DL[4]-mu[4]*n_DL/n_mu)*diff;
+DA[10]=(DL[10]-mu[10]*n_DL/n_mu)*diff;
+DA[20]=(DL[20]-mu[20]*n_DL/n_mu)*diff;
 
     // update Te in system and jacobian
     sys.Te = Te;
@@ -1174,7 +1175,7 @@ DA[20]=(DL[20]+mu[20]*n_DL/n_mu)*diff;
   value_type H=(3*n_new[2]+2*n_new[3]+3*n_new[4]+4*n_new[5]+3*n_new[6]+n_new[7]
 	+2*n_new[8]+2*n_new[9]+2*n_new[10]+5* n_new[11]+2*n_new[12]
 	+4*n_new[13]+6*n_new[14]+3*n_new[15]+5*n_new[16]+n_new[17]
-         +n_new[18])/(4*n_SiH4_ini);
+         +n_new[18])/(4.*n_SiH4_ini);
 
   cerr<<"H="<<H<<endl;
 
