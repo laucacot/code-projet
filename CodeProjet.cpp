@@ -84,7 +84,7 @@ value_type k5 (value_type Te) //K5 Ar* + e -> Ar + e
 value_type k6 (value_type Te) //K6 SiH4 + e -> SiH3 + H + e
 {
     value_type K6;
-    K6=1.83E-9*pow((Te),-1.)*exp(-(10.68)/(Te))/D;
+    K6=1.83E-9*pow((Te),-1.)*exp(-(8.3)/(Te))/D;
     return K6;
 
 }
@@ -92,7 +92,7 @@ value_type k6 (value_type Te) //K6 SiH4 + e -> SiH3 + H + e
 value_type k7 (value_type Te) //K7 SiH4 + e -> SiH2 + 2H + e
 {
     value_type K7;
-    K7=8.97E-9*pow((Te),-1.)*exp(-(10.68)/(Te));
+    K7=8.97E-9*pow((Te),-1.)*exp(-(8.3)/(Te));
     return K7;
 
 }
@@ -100,7 +100,7 @@ value_type k7 (value_type Te) //K7 SiH4 + e -> SiH2 + 2H + e
 value_type k8 (value_type Te) //K8 SiH4 + e -> SiH3- + H
 {
     value_type K8;
-    K8=3.77E-9*pow((Te),-1.63)*exp(-(8.29)/(Te));
+    K8=3.77E-9*pow((Te),-1.63)*exp(-(5.7)/(Te));
     return K8;
 
 }
@@ -108,7 +108,7 @@ value_type k8 (value_type Te) //K8 SiH4 + e -> SiH3- + H
 value_type k9 (value_type Te) //K9 SiH4 + e -> SiH2- + 2H
 {
     value_type K9;
-    K9=3.77E-9*pow((Te),-1.63)*exp(-(8.29)/(Te));
+    K9=3.77E-9*pow((Te),-1.63)*exp(-(5.7)/(Te));
     return K9;
 
 }
@@ -117,7 +117,7 @@ value_type k10 (value_type Te) //K10 SiH4 + e -> SiH3+ + H + 2e
 {
 
     value_type K10;
-    K10= 2.5e2*pow((Te),-2.93)*exp(-(24.1)/(Te))/D;
+    K10= 2.5e2*pow((Te),-2.93)*exp(-(11.9)/(Te));
     return K10;
 
 }
@@ -167,7 +167,7 @@ value_type k15 (value_type Te) //K15 SiH2 + e -> SiH2-
 value_type k16 (value_type Te) //K16 H2 + e ->  2H + e
 {
     value_type K16;
-    K16=4.73E-14*pow((Te),-0.23)*exp(-(10.09)/(Te));
+    K16=4.73E-14*pow((Te),-0.23)*exp(-(8.9)/(Te));
     return K16;
 
 }
@@ -175,7 +175,7 @@ value_type k16 (value_type Te) //K16 H2 + e ->  2H + e
 value_type k17 (value_type Te) //K17 H2 + e ->  H2+ + 2e
 {
     value_type K17;
-    K17=1.1E-14*pow((Te),0.42)*exp(-(16.05)/(Te));
+    K17=1.1E-14*pow((Te),0.42)*exp(-(15.4)/(Te));
     return K17;
 
 }
@@ -233,7 +233,7 @@ value_type k24 (value_type Tg) //K24 SiH4 + SIH3 -> Si2H5 + H2
 value_type k25 (value_type Tg) //K25 SiH2 + H2 -> SiH4
 {
     value_type K25;
-    K25=2.e-19 ;
+    K25=2.7e-20 ;
     return K25;
 }
 
@@ -247,7 +247,7 @@ value_type k26 (value_type Tg) //K26 SiH2  -> Si + H2
 value_type k27 (value_type Tg) //K27 SiH4 + H -> H2 + SiH3
 {
     value_type K27;
-    K27=2.44E-22*pow((Tg),1.9)*exp(-(0.09)/(Tg))/D;
+    K27=1.2e-18*pow((Tg),1.9)*exp(-(0.09)/(Tg))/D;
     return K27;
 }
 
