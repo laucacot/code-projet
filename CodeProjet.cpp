@@ -31,7 +31,7 @@ const value_type L = 3.e-2; //distance netre deux plaques en m
 const value_type pi = M_PI;
 const value_type diff = pow((pi/L), 2.);//facteur pour la diffusion 
 const value_type n_Ar =  pression*2.69e25; //densite d'argon en m-3
-const value_type n_SiH4_ini = n_Ar/80.; //densite de SiH4 initiale
+const value_type n_SiH4_ini = n_Ar/30.; //densite de SiH4 initiale
 const int Nbr_espece=21;
 const value_type DP = 1.e23;//eV/s.m3 puissance totale du systeme par unite de volume imposee
 const float C=1.e20;// m-3/s taux d'injection du SiH4 dans le réacteur
@@ -424,6 +424,7 @@ struct nsystem
  value_type   dSi= n[2] + n[3] + n[4] + n[5] + n[6] + n[8] + 2.*n[11] 
       + 2.*n[12] + 2.*n[13] + 2.*n[14] + 2.*n[15] + 2.*n[16] + n[17] 
       + n[18] + n[19]; //somme de tous les atomes de si 
+//cerr<<dSi<<endl;
 
     dndt[0]=k1(Te)*n_Ar*n[0] +k3(Te)*n[1]*n[0] +k4(Tg)*pow(n[1],2.) -k8(Te)*n[5]*n[0]
         -k9(Te)*n[5]*n[0] +k10(Te)*n[5]*n[0] -k11(Te)*n[6]*n[0] +k12(Te)*n[0]*n[6]
@@ -974,7 +975,7 @@ value_type   dSi= n[2] + n[3] + n[4] + n[5] + n[6] + n[8] + 2.*n[11]
     jacobi( 20 , 17 ) =0.0;
     jacobi( 20 , 18 ) =0.0;
     jacobi( 20 , 19 ) =0.0;
-    jacobi( 20 , 20 ) =-k41(Tg)*n[3]-k42(Tg)*n[2] -DA[20]- C  /dSi;
+    jacobi( 20 , 20 ) =-k41(Tg)*n[3]-k42(Tg)*n[2] -DA[20];
     
 
     dfdt( 0 ) = 0.0;
