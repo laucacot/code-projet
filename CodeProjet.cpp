@@ -34,7 +34,7 @@ const value_type n_Ar =  pression*2.69e25; //densite d'argon en m-3
 const value_type n_SiH4_ini = n_Ar/30.; //densite de SiH4 initiale
 const int Nbr_espece=21;
 const value_type DP = 1.e23;//eV/s.m3 puissance totale du systeme par unite de volume imposee
-const float C=1.e20;// m-3/s taux d'injection du SiH4 dans le réacteur
+const float C=1.35e21;//1.e20;// m-3/s taux d'injection du SiH4 dans le réacteur
 const value_type Tg =0.02758 ; //eV soit 320 K
 const float D=1.;// m-3/s taux d'injection du SiH4 dans le réacteur
 
@@ -1182,6 +1182,4 @@ DA[20]=(DL[20]-mu[20]*n_DL/n_mu)*diff;
 
 //cerr<<Da_e<<endl;
   return 0;
-
 }
-
